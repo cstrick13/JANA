@@ -8,7 +8,8 @@
   margin: 0;
   padding: 0;
   height: 100vh; /* Full viewport height */
-  background-color: #ffffff; /* Red background */
+  background: white;
+  font-family: 'Poppins', sans-serif;
   color: #333;
   font-family: 'Arial', sans-serif;
   text-align: center;
@@ -19,7 +20,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 20%;
@@ -37,12 +38,12 @@
 
 
 .bottom-rectangle {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 15%;
-  background-color: #c2c9c4;
+  background-color: #a6c1dd; /* Blue color */
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -54,12 +55,28 @@
   color: white; 
 }
 
+.top-rectangle {
+  position: fixed; /* Makes it stick to the top */
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #a6c1dd; /* Blue color */
+}
+
+.top-rectangle h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #fff; /* White text */
+  margin: 0;
+}
+
 .home-content {
   max-width: 800px;
   padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  background-color: #fff; /* White background for the content */
 }
 
 h1 {
