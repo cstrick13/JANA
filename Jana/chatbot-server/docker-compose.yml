@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  python-server:
+    build: .
+    ports:
+      - "${PORT}:${PORT}"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+      - PORT=5050
+    restart: unless-stopped
