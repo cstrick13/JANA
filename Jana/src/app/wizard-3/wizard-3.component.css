@@ -1,20 +1,82 @@
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem; /* Reduce padding for smaller screens */
+  background-color: #272829;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width of parent */
+  max-width: 500px; /* Ensure it doesn't get too wide */
+  margin: 1rem auto; /* Center and reduce margin */
+  text-align: center;
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+.subtext {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: #b3b3c3; /* Subtle text color */
+}
+
+.input-field {
+  display: block;
+  width: 100%;
+  margin: 1rem 0;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #4b4b61; /* Subtle border */
+  background: #1f1f30;
+  border-radius: 8px;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.input-field:focus {
+  border-color: #0091ff; /* Highlight on focus */
+}
+
 .wizard-navigation {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 2rem;
-  }
-  
-  button {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+button {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.back-btn {
+  background-color: #474761;
+  color: #ffffff;
+}
+
+.back-btn:hover {
+  background-color: #5b5b76;
+}
+
+.next-btn {
+  background-color: #0091ff;
+  color: white;
+}
+
+.next-btn:hover {
+  background-color: #0075cc;
+  transform: scale(1.05); /* Subtle hover effect */
+}
+
+.next-btn:active {
+  transform: scale(0.95); /* Pressed button effect */
+}

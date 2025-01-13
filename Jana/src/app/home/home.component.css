@@ -118,7 +118,7 @@ p {
   .bottom-rectangle i {
     font-size: 2rem;
     margin-right: 50px;
-    color: white; 
+    color: rgb(0, 0, 0); 
   }
   .home-content {
     max-width: 400px;
@@ -160,7 +160,7 @@ p {
 /* For very small devices (e.g., narrow phones) */
 @media (max-width: 480px) {
   .bottom-rectangle {
-    height: 10%;
+    height: 5%;
   }
 
   .home-content {
