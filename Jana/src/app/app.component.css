@@ -1,45 +1,54 @@
-:host{
+:host {
   margin: 0;
   padding: 0;
 }
 
-
 .wizard-container {
   display: flex;
+  flex-direction: column;
 }
 
-.wizard-sidebar {
+.wizard-steps {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 150px; 
-  padding: 2rem;
-  border-radius: 10px; /* Optional: Add rounded corners */
+  padding: 1rem 0;
 }
 
-.wizard-sidebar div {
+.circle {
   width: 100px; 
   height: 100px; 
-  border-radius: 50%;
+  border-radius: 50%; /* Keeps the steps as circles */
   background-color: #ccc;
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 1.5rem 0; 
+  margin: 0 1rem;
   font-size: 1.2rem;
   cursor: pointer;
+  gap: 2;
   transition: background-color 0.3s, transform 0.2s;
 }
 
-.wizard-sidebar div.active {
+.circle.active {
   background-color: #00b894; /* Active step background */
 }
 
-.wizard-sidebar div:hover {
+.circle:hover {
   background-color: #00cec9; 
   transform: scale(1.1);
+}
+
+.line {
+  width: 50px; /* Length of the line */
+  height: 5px; /* Thickness of the line */
+  background-color: #ccc; /* Line color */
+  margin: 0 1rem; /* Spacing */
+  border-radius: 0; /* Ensure no rounded edges */
+  border: none; /* Reset any borders */
+  display: block; /* Ensure it's a block element */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .wizard-content {
