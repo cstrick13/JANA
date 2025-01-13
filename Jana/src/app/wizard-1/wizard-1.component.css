@@ -3,48 +3,50 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background-color: #f8f9fa; /* Light background for better readability */
+  padding: 1.5rem; /* Reduce padding for smaller screens */
+  background-color: #f8f9fa;
   border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-  max-width: 600px;
-  margin: 2rem auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width of parent */
+  max-width: 500px; /* Ensure it doesn't get too wide */
+  margin: 1rem auto; /* Center and reduce margin */
   text-align: center;
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: 1.8rem; /* Slightly smaller for responsiveness */
   color: #333;
   margin-bottom: 1rem;
 }
 
 p {
-  font-size: 1.2rem;
+  font-size: 1rem; /* Reduce font size */
   color: #555;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .wizard-config {
   width: 100%;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem; /* Reduce margin */
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
-  text-align: left; /* Align labels and inputs */
+  margin-bottom: 1rem; /* Compact spacing */
+  text-align: left;
 }
 
 label {
   display: block;
+  font-size: 0.9rem; /* Smaller text for responsiveness */
   font-weight: bold;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   color: #333;
 }
 
 input {
   width: 100%;
-  padding: 0.8rem;
-  font-size: 1rem;
+  padding: 0.7rem; /* Reduce padding */
+  font-size: 0.9rem; /* Smaller text */
   border: 1px solid #ccc;
   border-radius: 5px;
 }
@@ -57,13 +59,13 @@ input:focus {
 
 .wizard-navigation {
   display: flex;
-  justify-content: flex-end; /* Align button to the right */
+  justify-content: center; /* Center-align buttons for small screens */
   width: 100%;
 }
 
 button {
-  padding: 0.8rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.7rem 1.2rem; /* Reduce padding */
+  font-size: 0.9rem;
   background-color: #007bff;
   color: white;
   border: none;
@@ -74,9 +76,54 @@ button {
 
 button:hover {
   background-color: #0056b3;
-  transform: translateY(-2px); /* Lift button on hover */
+  transform: translateY(-2px);
 }
 
 button:active {
-  transform: translateY(0); /* Reset button on click */
+  transform: translateY(0);
+}
+
+/* RESPONSIVE STYLES */
+@media (max-width: 768px) {
+  .wizard-step {
+    padding: 1rem;
+    max-width: 100%; /* Allow full screen width */
+    margin: 0.5rem auto; /* Compact margin */
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  p {
+    font-size: 0.9rem;
+  }
+
+  input {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  button {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-step {
+    padding: 0.8rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  p {
+    font-size: 0.8rem;
+  }
+
+  button {
+    padding: 0.5rem 0.8rem;
+  }
 }
