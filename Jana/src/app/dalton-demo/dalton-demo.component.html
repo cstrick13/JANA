@@ -1,1 +1,37 @@
-<p>dalton-demo works!</p>
+<div class="container">
+    <h2>Audio Recorder</h2>
+  
+    <!-- Use hasMediaDevices() instead of navigator.mediaDevices -->
+    <button
+      class="record-btn"
+      (click)="toggleRecording()"
+      [disabled]="!hasMediaDevices"
+    >
+      {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
+    </button>
+  
+    <!-- Show an error if !hasMediaDevices -->
+    <p *ngIf="!hasMediaDevices" class="error">
+      Your browser does not support recording (MediaDevices not available).
+    </p>
+  
+    <div class="status">
+      <span class="status-dot" [class.recording]="isRecording"></span>
+      <span>{{ isRecording ? 'Recording...' : 'Not Recording' }}</span>
+    </div>
+  
+    <!-- Audio playback for the recorded file -->
+    <div *ngIf="audioURL" class="playback">
+      <p><strong>Recorded Audio:</strong></p>
+      <audio [src]="audioURL" controls></audio>
+    </div>
+  
+    <!-- Textbox/textarea to display the translated (or transcribed) text -->
+    <div class="translated-text" *ngIf="translatedText">
+      <p><strong>Translated/Transcribed Text:</strong></p>
+      <!-- Text area for multi-line display -->
+      <textarea rows="5" cols="40" [value]="translatedText" readonly></textarea>
+    </div>
+  </div>
+  
+  

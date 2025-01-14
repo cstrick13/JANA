@@ -1,0 +1,61 @@
+.container {
+    max-width: 400px;
+    margin: 20px auto;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  
+  .record-btn {
+    background-color: blue;
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .record-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .status {
+    margin-bottom: 16px;
+  }
+  
+  .status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: gray;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  
+  .status-dot.recording {
+    background-color: red;
+  }
+  
+  .error {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .playback {
+    margin-top: 16px;
+  }
+  
+  .translated-text {
+    margin-top: 16px;
+    text-align: left;
+  }
+  
+  textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  
