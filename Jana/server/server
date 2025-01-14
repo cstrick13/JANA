@@ -1,0 +1,37 @@
+from flask import Flask, request, jsonify
+import os
+import uuid
+import whisper
+
+app = Flask(__name__)
+
+# Load a Whisper model into memory at server startup.
+# "tiny" or "base" or "small" etc. for faster performance on CPU.
+model = whisper.load_model("tiny")  # or "base", "small", etc.
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    # Grab the file from the request
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files['file']
+
+    # Generate a temporary filename
+    temp_filename = str(uuid.uuid4()) + ".ogg"
+    file.save(temp_filename)
+
+    # Run Whisper transcription
+    result = model.transcribe(temp_filename)
+
+    # Clean up the temp file
+    os.remove(temp_filename)
+
+    # Send JSON response back to the client
+    return jsonify({
+        "transcript": result["text"]
+    })
+
+if __name__ == '__main__':
+    # Flask default port is 5000
+    app.run(host='0.0.0.0', port=5000, debug=True)

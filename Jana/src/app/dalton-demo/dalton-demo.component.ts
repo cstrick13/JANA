@@ -16,7 +16,7 @@ export class DaltonDemoComponent implements OnInit {
   recordedChunks: Blob[] = [];
   audioURL: string | null = null;
 
-  // Make sure you declare this property:
+  // Placeholder for the transcription from the server
   translatedText: string = '';
 
   get hasMediaDevices(): boolean {
@@ -53,9 +53,8 @@ export class DaltonDemoComponent implements OnInit {
         const recordedBlob = new Blob(this.recordedChunks, { type: 'audio/ogg; codecs=opus' });
         this.audioURL = URL.createObjectURL(recordedBlob);
 
-        // Example placeholder for logic that sets the transcribed/translated text.
-        // Replace with your real logic or server calls:
-        this.translatedText = 'Hello! This is your translated (or transcribed) text.';
+        // Example placeholder text before sending to Whisper
+        this.translatedText = 'Recorded locally. Ready to send to the server...';
       });
 
       this.mediaRecorder.start();
@@ -69,6 +68,46 @@ export class DaltonDemoComponent implements OnInit {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();
       this.mediaRecorder = null;
+    }
+  }
+
+  /**
+   * Sends the recorded audio Blob to the local Flask server for transcription via Whisper.
+   */
+  async sendAudioToServer() {
+    if (!this.audioURL) {
+      console.warn('No audioURL to send.');
+      return;
+    }
+
+    try {
+      // 1. Convert the Blob URL back into a Blob
+      const response = await fetch(this.audioURL);
+      const audioBlob = await response.blob();
+
+      // 2. Create FormData and append the Blob as a file
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'recording.ogg');
+
+      // 3. POST to your local server (Flask) endpoint
+      const res = await fetch('http://localhost:5000/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.statusText}`);
+      }
+
+      // 4. Parse the server response
+      const data = await res.json();
+      // data might look like { transcript: "...some text..." }
+
+      // 5. Update the translatedText in your UI
+      this.translatedText = data.transcript || '(No transcript returned)';
+    } catch (err) {
+      console.error('Error sending audio to server:', err);
+      this.translatedText = 'Error transcribing on server.';
     }
   }
 }
