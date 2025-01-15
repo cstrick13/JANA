@@ -1,45 +1,25 @@
 <div class="container">
-    <h2>Audio Recorder</h2>
-  
-    <!-- Record / Stop Button -->
-    <button
-      class="record-btn"
-      (click)="toggleRecording()"
-      [disabled]="!hasMediaDevices"
-    >
-      {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
+  <div class="content">
+    <h1 class="title">Audio Transcription Test</h1>
+    <p class="subtitle">Select an audio file to transcribe:</p>
+
+    <label class="file-upload">
+      <input type="file" accept="audio/*" (change)="handleFileInput($event)" />
+      <span>Choose File</span>
+    </label>
+    <span class="file-info" *ngIf="file">{{ file.name }}</span>
+
+    <button class="transcribe-button" (click)="submitFile()" [disabled]="!file">
+      Transcribe
     </button>
-  
-    <!-- Error if no MediaDevices -->
-    <p *ngIf="!hasMediaDevices" class="error">
-      Your browser does not support recording (MediaDevices not available).
-    </p>
-  
-    <!-- Recording status indicator -->
-    <div class="status">
-      <span class="status-dot" [class.recording]="isRecording"></span>
-      <span>{{ isRecording ? 'Recording...' : 'Not Recording' }}</span>
+
+    <div *ngIf="isLoading" class="loading">
+      <p>Processing your audio file...</p>
     </div>
-  
-    <!-- Audio playback -->
-    <div *ngIf="audioURL" class="playback">
-      <p><strong>Recorded Audio:</strong></p>
-      <audio [src]="audioURL" controls></audio>
+
+    <div *ngIf="transcription && !isLoading" class="result">
+      <h3>Transcription:</h3>
+      <p>{{ transcription }}</p>
     </div>
-  
-    <!-- Translated/Transcribed text -->
-    <div class="translated-text" *ngIf="translatedText">
-      <p><strong>Translated/Transcribed Text:</strong></p>
-      <textarea rows="5" cols="40" [value]="translatedText" readonly></textarea>
-    </div>
-  
-    <!-- Button to send the audio to the local Whisper server -->
-    <button
-      class="upload-btn"
-      (click)="sendAudioToServer()"
-      [disabled]="!audioURL"
-    >
-      Send to Whisper (Local)
-    </button>
   </div>
-  
+</div>

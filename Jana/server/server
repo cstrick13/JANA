@@ -1,37 +1,27 @@
 from flask import Flask, request, jsonify
-import os
-import uuid
+from flask_cors import CORS
 import whisper
+import tempfile
+import os
 
 app = Flask(__name__)
+CORS(app)
 
-# Load a Whisper model into memory at server startup.
-# "tiny" or "base" or "small" etc. for faster performance on CPU.
-model = whisper.load_model("tiny")  # or "base", "small", etc.
+# Load Whisper model
+model = whisper.load_model("base")
 
 @app.route('/transcribe', methods=['POST'])
-def transcribe_audio():
-    # Grab the file from the request
-    if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+def transcribe():
+    if 'audio' not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
 
-    file = request.files['file']
+    audio_file = request.files['audio']
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        audio_file.save(tmp.name)
+        transcription = model.transcribe(tmp.name)
+        os.unlink(tmp.name)  # Clean up the temp file
 
-    # Generate a temporary filename
-    temp_filename = str(uuid.uuid4()) + ".ogg"
-    file.save(temp_filename)
-
-    # Run Whisper transcription
-    result = model.transcribe(temp_filename)
-
-    # Clean up the temp file
-    os.remove(temp_filename)
-
-    # Send JSON response back to the client
-    return jsonify({
-        "transcript": result["text"]
-    })
+    return jsonify({"transcription": transcription["text"]})
 
 if __name__ == '__main__':
-    # Flask default port is 5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)

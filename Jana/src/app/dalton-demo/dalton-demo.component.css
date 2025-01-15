@@ -1,61 +1,120 @@
+/* General container */
 .container {
-    max-width: 400px;
-    margin: 20px auto;
-    text-align: center;
-    font-family: sans-serif;
-  }
-  
-  .record-btn {
-    background-color: blue;
-    color: #fff;
-    border: none;
-    padding: 12px 20px;
-    margin-bottom: 16px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  
-  .record-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .status {
-    margin-bottom: 16px;
-  }
-  
-  .status-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: gray;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  
-  .status-dot.recording {
-    background-color: red;
-  }
-  
-  .error {
-    color: red;
-    font-weight: bold;
-  }
-  
-  .playback {
-    margin-top: 16px;
-  }
-  
-  .translated-text {
-    margin-top: 16px;
-    text-align: left;
-  }
-  
-  textarea {
-    width: 100%;
-    font-family: inherit;
-    font-size: 14px;
-  }
-  
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Stepper navigation */
+.stepper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.step {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #ccc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+
+.step.active {
+  background-color: #00b894;
+}
+
+.divider {
+  width: 50px;
+  height: 2px;
+  background-color: #ccc;
+}
+
+.stepper .step:last-child {
+  margin-right: 0;
+}
+
+/* Content section */
+.content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 24px;
+  color: #2d3436;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #636e72;
+  margin-bottom: 20px;
+}
+
+/* File upload styling */
+.file-upload {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f1f1f1;
+  color: #636e72;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.file-upload:hover {
+  background-color: #e1e1e1;
+}
+
+.file-upload input {
+  display: none;
+}
+
+.file-info {
+  display: block;
+  margin-top: 5px;
+  color: #636e72;
+  font-size: 14px;
+}
+
+/* Transcribe button */
+.transcribe-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  background-color: #00b894;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.transcribe-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.transcribe-button:hover:not(:disabled) {
+  background-color: #019874;
+}
+
+/* Loading and results */
+.loading {
+  margin-top: 20px;
+  color: #0984e3;
+  font-size: 16px;
+}
+
+.result {
+  margin-top: 30px;
+  font-size: 16px;
+  color: #2d3436;
+}

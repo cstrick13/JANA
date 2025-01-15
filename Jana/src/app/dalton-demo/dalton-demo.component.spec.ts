@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { DaltonDemoComponent } from './dalton-demo.component';
 
 describe('DaltonDemoComponent', () => {
@@ -8,10 +8,10 @@ describe('DaltonDemoComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DaltonDemoComponent]
-    })
-    .compileComponents();
-    
+      declarations: [DaltonDemoComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
+
     fixture = TestBed.createComponent(DaltonDemoComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
