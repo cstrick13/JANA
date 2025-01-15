@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { RouterModule, RouterOutlet } from '@angular/router';
+import { WizardConfigService } from '../wizard-config.service';
 
 @Component({
   selector: 'app-dalton-demo',
   standalone: true, // Mark as standalone
-  imports: [CommonModule, HttpClientModule], // Use imports here
+  imports: [CommonModule, HttpClientModule,RouterOutlet, RouterModule], // Use imports here
   templateUrl: './dalton-demo.component.html',
   styleUrls: ['./dalton-demo.component.css']
 })
@@ -14,7 +16,14 @@ export class DaltonDemoComponent {
   transcription: string = '';
   isLoading: boolean = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,private wizardConfigService: WizardConfigService) {}
+
+  wizardConfig: any;
+
+  ngOnInit() {
+    this.wizardConfig = this.wizardConfigService.getConfig();
+  }
+
 
   handleFileInput(event: Event): void {
     const input = event.target as HTMLInputElement;

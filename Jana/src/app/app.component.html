@@ -8,7 +8,10 @@
     <div class="line"></div>
     <div class="circle" [class.active]="router.url === '/step3'">3</div>
     <div class="line"></div>
-    <div class="circle" [class.active]="router.url === '/recording'">Record</div>
+    <div class="circle" [class.active]="router.url === '/recording'">
+      <i class="fas fa-check"></i>
+    </div>
+    
   </nav>
   <div class="wizard-content">
     <router-outlet></router-outlet>
