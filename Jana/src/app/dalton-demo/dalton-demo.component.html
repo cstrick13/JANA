@@ -1,31 +1,11 @@
 <div class="container">
-  <div class="content">
-    <div class="wizard-summary">
-      <h3>Wizard Config</h3>
-      <p>Install Path: {{ wizardConfig.outputPath }}</p>
-      <p>Terminal Path: {{ wizardConfig.terminalPath }}</p>
-    </div>
-    <h1 class="title">Audio Transcription Test</h1>
-    <p class="subtitle">Select an audio file to transcribe:</p>
+	<h1 class="title">Audio Transcription Test</h1>
+	<p class="subtitle">Press the button to record your voice:</p>
 
-    <label class="file-upload">
-      <input type="file" accept="audio/*" (change)="handleFileInput($event)" />
-      <span>Choose File</span>
-    </label>
-    <span class="file-info" *ngIf="file">{{ file.name }}</span>
+	<button (click)="toggleVoiceRecord()">{{ recording ? 'Stop Recording' : 'Push to Record' }}</button>
 
-    <button class="transcribe-button" (click)="submitFile()" [disabled]="!file">
-      Transcribe
-    </button>
+	<p id="status">{{ statusMessage }}</p>
 
-    <div *ngIf="isLoading" class="loading">
-      <p>Processing your audio file...</p>
-    </div>
-
-    <div *ngIf="transcription && !isLoading" class="result">
-      <h3>Transcription:</h3>
-      <p>{{ transcription }}</p>
-    </div>
-    <button routerLink="">Next ➡</button>
-  </div>
+	<h3>Transcription:</h3>
+	<textarea [(ngModel)]="transcription" rows="4" cols="50" readonly></textarea>
 </div>

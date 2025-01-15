@@ -1,57 +1,80 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';  // ✅ Import FormsModule for ngModel
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { WizardConfigService } from '../wizard-config.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
-  selector: 'app-dalton-demo',
-  standalone: true, // Mark as standalone
-  imports: [CommonModule, HttpClientModule,RouterOutlet, RouterModule], // Use imports here
-  templateUrl: './dalton-demo.component.html',
-  styleUrls: ['./dalton-demo.component.css']
+	selector: 'app-dalton-demo',
+	standalone: true, // ✅ Standalone component
+	imports: [CommonModule, FormsModule, HttpClientModule, RouterOutlet, RouterModule], // ✅ Add FormsModule
+	templateUrl: './dalton-demo.component.html',
+	styleUrls: ['./dalton-demo.component.css']
 })
 export class DaltonDemoComponent {
-  file: File | null = null;
-  transcription: string = '';
-  isLoading: boolean = false;
+	file: File | null = null;
+	transcription: string = '';
+	isLoading: boolean = false;
+	recording: boolean = false;
+	statusMessage: string = '';
+	wizardConfig: any = null;
 
-  constructor(private http: HttpClient,private wizardConfigService: WizardConfigService) {}
+	private mediaRecorder: MediaRecorder | null = null;
+	private chunks: BlobPart[] = [];
 
-  wizardConfig: any;
+	constructor(private http: HttpClient, private wizardConfigService: WizardConfigService) { }
 
-  ngOnInit() {
-    this.wizardConfig = this.wizardConfigService.getConfig();
-  }
+	ngOnInit() {
+		this.wizardConfig = this.wizardConfigService.getConfig();
+	}
 
+	async toggleVoiceRecord() {
+		if (!this.recording) {
+			this.statusMessage = "Recording...";
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				this.mediaRecorder = new MediaRecorder(stream);
+				this.chunks = [];
 
-  handleFileInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input?.files && input.files.length > 0) {
-      this.file = input.files[0];
-    }
-  }
+				this.mediaRecorder.ondataavailable = (event) => {
+					this.chunks.push(event.data);
+				};
 
-  submitFile(): void {
-    if (!this.file) {
-      alert('Please select a file before submitting.');
-      return;
-    }
+				this.mediaRecorder.onstop = async () => {
+					this.statusMessage = "Uploading audio...";
+					const audioBlob = new Blob(this.chunks, { type: "audio/wav" });
 
-    this.isLoading = true;
-    const formData = new FormData();
-    formData.append('audio', this.file);
+					if (audioBlob) {
+						const formData = new FormData();
+						formData.append("audio", audioBlob, "recording.wav");
 
-    this.http.post<{ transcription: string }>('http://127.0.0.1:5000/transcribe', formData)
-      .subscribe(
-        (response: { transcription: string }) => {
-          this.transcription = response.transcription;
-          this.isLoading = false;
-        },
-        (error: any) => {
-          console.error('Error:', error);
-          this.isLoading = false;
-        }
-      );
-  }
+						try {
+							const response = await firstValueFrom(this.http.post<{ transcription: string }>(
+								"http://127.0.0.1:5000/transcribe", formData
+							));
+							console.log(response);
+							this.transcription = response?.transcription || "No transcription received.";
+							this.statusMessage = "Recording complete.";
+						} catch (error) {
+							console.error("Upload error:", error);
+							this.statusMessage = "Upload failed.";
+						}
+					}
+				};
+
+				this.mediaRecorder.start();
+				this.recording = true;
+			} catch (error) {
+				console.error("Microphone access error:", error);
+				this.statusMessage = "Microphone access denied.";
+			}
+		} else {
+			if (this.mediaRecorder) {
+				this.mediaRecorder.stop();
+			}
+			this.recording = false;
+		}
+	}
 }
