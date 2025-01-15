@@ -14,7 +14,10 @@ body, html {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background-color: rgb(0, 0, 0); /* Background color for the wizard */
+  background-image: url('/assets/497.jpg'); /* Background image */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 

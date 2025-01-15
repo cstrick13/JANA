@@ -40,7 +40,7 @@
   line-height: 1.2; /* Tighter line spacing */
   letter-spacing: 2rem; /* Add spacing between letters */
   word-spacing: 10px; /* Add spacing between words */
-  background: linear-gradient(90deg, #f9fbfd, #fcfdfd); /* Gradient text */
+  background: linear-gradient(90deg, #f9fbfd, #d1d3d3); /* Gradient text */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
