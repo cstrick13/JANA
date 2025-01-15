@@ -5,6 +5,10 @@
   padding: 20px;
 }
 
+.wizard-summary{
+  color: #f1f1f1;
+}
+
 /* Stepper navigation */
 .stepper {
   display: flex;
