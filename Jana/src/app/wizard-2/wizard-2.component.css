@@ -1,3 +1,13 @@
+/* New container styling to arrange children horizontally */
+.wizard-content {
+  display: flex;
+  justify-content: center; /* centers items horizontally */
+  align-items: center; /* aligns items at the top */
+  gap: 2rem;             /* space between the canvas and voice config */
+  margin: 1rem 0;        /* optional: some vertical spacing */
+}
+
+/* You can keep your existing styles for .wizard-step, .voice-config, canvas, etc. */
 .wizard-step {
   max-width: 600px;
   margin: 2rem auto;
@@ -6,87 +16,19 @@
   position: relative;
 }
 
+/* Example: styling the canvas */
+canvas {
+  width: 200px;
+  height: 200px;
+  outline: none;
+  display: block; /* or inline-block; flexbox will handle the horizontal layout */
+  cursor: grab; 
+}
+
+/* Keep other styles as needed */
 .voice-config {
   background-color: #f9f9f9;
   padding: 1.5rem;
   border-radius: 10px;
-  margin-top: 3rem;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
-
-.config-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
-  color: #333;
-  margin-bottom: 1rem;
-}
-
-.config-header i {
-  font-size: 1.5rem;
-  color: #007bff;
-}
-
-.voice-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.voice-option {
-  padding: 0.75rem 1.25rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.voice-option:hover {
-  background-color: #0056b3;
-}
-
-.wizard-navigation {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15rem;
-}
-
-button {
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-.humaaans-img {
-  position: absolute;
-  top: 12rem;
-  right: -100px;
-  width: auto;
-}
-.audio-visualizer {
-  position: absolute;
-  top: -60px; /* Moves the dot above the voice config */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px; /* Adjust the size of the dot */
-  height: 200px;
-  background: transparent; /* Remove white background */
-  border-radius: 50%; /* Ensure it's a circle */
-  z-index: 1; /* Ensure it appears above other elements */
-}
-
-

@@ -1,20 +1,26 @@
 <div class="wizard-step">
   <h2>Step 2</h2>
   <p>Configuration settings go here.</p>
-  <div class="voice-config">
-    <canvas id="pulse-dot" class="audio-visualizer"></canvas>
-    <div class="config-header">
-      <i class="fas fa-microphone"></i>
-      <span>Choose Voice Configuration</span>
-    </div>
-    <div class="voice-options">
-      <button (click)="playAudio(1)" class="voice-option">Voice 1</button>
-      <button (click)="playAudio(2)" class="voice-option">Voice 2</button>
-      <button (click)="playAudio(3)" class="voice-option">Voice 3</button>
-      <button (click)="playAudio(4)" class="voice-option">Voice 4</button>
-      <button (click)="playAudio(5)" class="voice-option">Audio 5</button>
+
+  <!-- New container for horizontal layout -->
+  <div class="wizard-content">
+    <canvas #canvas></canvas>
+    <div class="voice-config">
+      <!-- <canvas id="pulse-dot" class="audio-visualizer"></canvas> -->
+      <div class="config-header">
+        <i class="fas fa-microphone"></i>
+        <span>Choose Voice Configuration</span>
+      </div>
+      <div class="voice-options">
+        <button (click)="playAudio(1)" class="voice-option">Voice 1</button>
+        <button (click)="playAudio(2)" class="voice-option">Voice 2</button>
+        <button (click)="playAudio(3)" class="voice-option">Voice 3</button>
+        <button (click)="playAudio(4)" class="voice-option">Voice 4</button>
+        <button (click)="playAudio(5)" class="voice-option">Audio 5</button>
+      </div>
     </div>
   </div>
+
   <div class="wizard-navigation">
     <button routerLink="/step1">⬅ Back</button>
     <button routerLink="/step3">Next ➡</button>
