@@ -30,8 +30,27 @@ export class DaltonDemoComponent {
 		this.wizardConfig = this.wizardConfigService.getConfig();
 	}
 
+	async requestMicrophonePermissions(): Promise<boolean> {
+		try {
+			await navigator.mediaDevices.getUserMedia({ audio: true });
+			console.log("Microphone access granted.");
+			return true;
+		} catch (error) {
+			console.error("Microphone access error:", error);
+			this.statusMessage = "Microphone access denied.";
+			return false;
+		}
+	}
+
 	async toggleVoiceRecord() {
 		if (!this.recording) {
+			// Ask for microphone permissions first
+			const permissionGranted = await this.requestMicrophonePermissions();
+			if (!permissionGranted) {
+				this.statusMessage = "Unable to start recording. Microphone access required.";
+				return;
+			}
+
 			this.statusMessage = "Recording...";
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -67,8 +86,8 @@ export class DaltonDemoComponent {
 				this.mediaRecorder.start();
 				this.recording = true;
 			} catch (error) {
-				console.error("Microphone access error:", error);
-				this.statusMessage = "Microphone access denied.";
+				console.error("Microphone access error during recording setup:", error);
+				this.statusMessage = "Failed to start recording.";
 			}
 		} else {
 			if (this.mediaRecorder) {
