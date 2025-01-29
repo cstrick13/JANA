@@ -4,6 +4,7 @@ import { Wizard2Component } from "./wizard-2/wizard-2.component";
 import { HomeComponent } from "./home/home.component";
 import { Wizard3Component } from "./wizard-3/wizard-3.component";
 import { DaltonDemoComponent } from "./dalton-demo/dalton-demo.component";
+import { JanaComponent } from "./jana/jana.component";
 
 
 
@@ -12,6 +13,11 @@ const routeConfig: Routes = [
         path: "",
         component: HomeComponent,
         title: "Home",
+    },
+    {
+        path:"jana",
+        component: JanaComponent,
+        title: "Jana",
     },
     {
         path: "step1",

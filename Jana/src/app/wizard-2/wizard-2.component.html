@@ -12,17 +12,16 @@
         <span>Choose Voice Configuration</span>
       </div>
       <div class="voice-options">
-        <button (click)="playAudio(1)" class="voice-option">Voice 1</button>
-        <button (click)="playAudio(2)" class="voice-option">Voice 2</button>
-        <button (click)="playAudio(3)" class="voice-option">Voice 3</button>
-        <button (click)="playAudio(4)" class="voice-option">Voice 4</button>
-        <button (click)="playAudio(5)" class="voice-option">Audio 5</button>
+        <button (click)="playAudio(1)" class="voice-button">Voice 1</button>
+        <button (click)="playAudio(2)" class="voice-button">Voice 2</button>
+        <button (click)="playAudio(3)" class="voice-button">Voice 3</button>
+        <button (click)="playAudio(4)" class="voice-button">Voice 4</button>
+        <button (click)="playAudio(5)" class="voice-button">Audio 5</button>
       </div>
     </div>
   </div>
 
   <div class="wizard-navigation">
-    <button routerLink="/step1">⬅ Back</button>
-    <button routerLink="/step3">Next ➡</button>
+    <button (click)="onNext()">Next ➡</button>
   </div>
 </div>

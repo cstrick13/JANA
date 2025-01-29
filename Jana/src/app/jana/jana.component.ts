@@ -1,22 +1,25 @@
+
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Router, RouterModule, RouterOutlet } from '@angular/router';
+import { RouterModule, RouterOutlet } from '@angular/router';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 
 @Component({
-  selector: 'app-wizard-2',
+  selector: 'app-jana',
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterModule],
-  templateUrl: './wizard-2.component.html',
-  styleUrl: './wizard-2.component.css'
+  templateUrl: './jana.component.html',
+  styleUrl: './jana.component.css'
 })
-export class Wizard2Component implements OnInit, AfterViewInit, OnDestroy {
+export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
-  private selectedAudioSrc?: string;
   private currentSound?: THREE.Audio;
+  constructor(
+    public wizardConfigService: WizardConfigService 
+  ) {}
 
   private audioContext!: AudioContext;
   private analyser!: THREE.AudioAnalyser;
@@ -42,13 +45,11 @@ export class Wizard2Component implements OnInit, AfterViewInit, OnDestroy {
    */
   private isShortClip = false;
 
-
-  constructor(
-    private wizardStateService: WizardConfigService,private router: Router
-  ) {}
-
   ngOnInit() {
-   
+    console.log('User Name:', this.wizardConfigService.userName);
+    console.log('Command Word:', this.wizardConfigService.commandWord);
+    console.log('Wizard Finished:', this.wizardConfigService.wizardFinished);
+    console.log('Audio Src:', this.wizardConfigService.selectedAudioSrc);
   }
 
   ngAfterViewInit(): void {
@@ -57,7 +58,6 @@ export class Wizard2Component implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stopAudio();
     // Clean up the animation loop
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
@@ -70,8 +70,8 @@ export class Wizard2Component implements OnInit, AfterViewInit, OnDestroy {
       canvas: this.canvasRef.nativeElement,
       antialias: true,
     });
-    this.renderer.setSize(500, 500);
-    this.renderer.setClearColor(0x000000, 0); // Transparent background
+    this.renderer.setSize(800, 800);
+    this.renderer.setClearColor(0x000000, 1);
   
     // 2) Create Scene
     this.scene = new THREE.Scene();
@@ -220,60 +220,39 @@ vec3 fade(vec3 t) {
     this.camera.updateProjectionMatrix();
   }
   async playAudio(voiceNumber: number) {
-    // If there's already an audio playing, stop it first
-    if (this.currentSound && this.currentSound.isPlaying) {
-      this.currentSound.stop();
+    // If there's already an audio playing, stop it and clear the reference.
+    if (this.currentSound) {
+      if (this.currentSound.isPlaying) {
+        this.currentSound.stop();
+      }
       this.currentSound = undefined;
     }
-
-    // Build the path to the audio
-    const audioSrc = `/assets/voices/audio${voiceNumber}.mp3`;
-
-    // Keep track of which audio is selected
-    this.selectedAudioSrc = audioSrc;
-    console.log('Selected audio:', this.selectedAudioSrc);
-
-    // Create a new THREE.Audio if you want to visualize or play in 3D context
+  
+    // Get the AudioListener attached to the camera.
     const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
+    
+    // Create a new THREE.Audio object and store it as the current sound.
     const sound = new THREE.Audio(listener);
     this.currentSound = sound;
-
+    
     const audioLoader = new THREE.AudioLoader();
     audioLoader.load(
-      audioSrc,
+      `/assets/voices/audio${voiceNumber}.mp3`,
       (buffer: AudioBuffer) => {
+        // Set the audio buffer, ensure looping is off, and set volume.
         sound.setBuffer(buffer);
         sound.setLoop(false);
         sound.setVolume(0.5);
+        
+        // Play the sound.
         sound.play();
-
-        // Optionally create the analyser
+        
+        // Optionally, if you wish to use an analyser for visuals, set it up here.
         this.analyser = new THREE.AudioAnalyser(sound, 32);
       },
       undefined,
       (err) => console.error('Audio loading error:', err)
     );
-  }
-
-
-  onNext(): void {
-    // 1) Stop the audio if playing
-    this.stopAudio();
-
-    // 2) Save the selected audio path to the WizardStateService
-    if (this.selectedAudioSrc) {
-      this.wizardStateService.selectedAudioSrc = this.selectedAudioSrc;
-    }
-
-    // 3) Navigate to the next step
-    this.router.navigate(['/step3']);
-  }
-
-  private stopAudio(): void {
-    if (this.currentSound && this.currentSound.isPlaying) {
-      this.currentSound.stop();
-    }
-    this.currentSound = undefined;
   }
   
   
@@ -299,5 +278,4 @@ vec3 fade(vec3 t) {
     animate();
   }
 
-  
 }

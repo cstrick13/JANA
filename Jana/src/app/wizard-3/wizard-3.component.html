@@ -1,13 +1,27 @@
 <div class="wizard-step">
   <h2>Let’s Get Acquainted</h2>
   <p class="subtext">What should I call you?</p>
-  <input type="text" placeholder="Enter your name" class="input-field" />
+
+  <!-- Bind userName with two-way data binding -->
+  <input
+    type="text"
+    placeholder="Enter your name"
+    class="input-field"
+    [(ngModel)]="userName"
+  />
 
   <p class="subtext">What should the command word be?</p>
-  <input type="text" placeholder="Enter command word" class="input-field" />
+
+  <!-- Bind commandWord with two-way data binding -->
+  <input
+    type="text"
+    placeholder="Enter command word"
+    class="input-field"
+    [(ngModel)]="commandWord"
+  />
 
   <div class="wizard-navigation">
-    <button class="next-btn" routerLink="/recording">Finish</button>
+    <!-- Call onFinish() instead of direct routerLink -->
+    <button class="next-btn" (click)="onFinish()">Finish</button>
   </div>
 </div>
- 

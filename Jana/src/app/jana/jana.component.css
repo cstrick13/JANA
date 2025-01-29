@@ -1,0 +1,26 @@
+/* Make the entire component fill the screen with black background */
+:host {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000; /* black background */
+    min-height: 100vh;      /* fill at least full viewport height */
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .info{
+    color: white;
+    font-size: 1.5rem;
+    margin: 1rem;
+  }
+  canvas {
+    display: block;
+    /* We can let Three.js set the canvas' actual drawing size to 800x800,
+       but we can also control how it scales in CSS if you wish: */
+  
+
+    width: 80vw;
+    height: 80vw;
+  }
+  

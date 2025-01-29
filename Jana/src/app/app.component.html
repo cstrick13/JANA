@@ -1,6 +1,6 @@
 <app-home *ngIf="router.url === '/'"></app-home>
 
-<div class="wizard-container" *ngIf="router.url !== '/'">
+<div class="wizard-container" *ngIf="!wizardConfigService.wizardFinished">
   <nav class="wizard-steps">
     <div class="circle" [class.active]="router.url === '/step1'">1</div>
     <div class="line"></div>
@@ -11,9 +11,11 @@
     <div class="circle" [class.active]="router.url === '/recording'">
       <i class="fas fa-check"></i>
     </div>
-    
   </nav>
   <div class="wizard-content">
     <router-outlet></router-outlet>
   </div>
 </div>
+
+<!-- Show app-jana if the wizard is finished -->
+<app-jana *ngIf="wizardConfigService.wizardFinished"></app-jana>
