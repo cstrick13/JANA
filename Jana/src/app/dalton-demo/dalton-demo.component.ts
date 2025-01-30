@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';  // ✅ Import FormsModule for ngModel
+import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { WizardConfigService } from '../wizard-config.service';
@@ -8,8 +8,8 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
 	selector: 'app-dalton-demo',
-	standalone: true, // ✅ Standalone component
-	imports: [CommonModule, FormsModule, HttpClientModule, RouterOutlet, RouterModule], // ✅ Add FormsModule
+	standalone: true,
+	imports: [CommonModule, FormsModule, HttpClientModule, RouterOutlet, RouterModule],
 	templateUrl: './dalton-demo.component.html',
 	styleUrls: ['./dalton-demo.component.css']
 })
@@ -51,10 +51,12 @@ export class DaltonDemoComponent {
 						formData.append("audio", audioBlob, "recording.wav");
 
 						try {
-							const response = await firstValueFrom(this.http.post<{ transcription: string }>(
-								"http://127.0.0.1:5000/transcribe", formData
-							));
-							console.log(response);
+							const response = await firstValueFrom(
+								this.http.post<{ transcription: string }>(
+									"http://127.0.0.1:5000/transcribe", 
+									formData
+								)
+							);
 							this.transcription = response?.transcription || "No transcription received.";
 							this.statusMessage = "Recording complete.";
 						} catch (error) {
@@ -75,6 +77,41 @@ export class DaltonDemoComponent {
 				this.mediaRecorder.stop();
 			}
 			this.recording = false;
+		}
+	}
+
+	async speak() {
+		// Here we send the transcription text to TTS.
+		if (!this.transcription.trim()) {
+			this.statusMessage = "Nothing to speak. Please transcribe or provide text.";
+			return;
+		}
+
+		try {
+			this.statusMessage = "Generating speech...";
+			// Use the Flask TTS endpoint
+			const audioBlob = await firstValueFrom(
+				this.http.post("http://127.0.0.1:5000/tts", 
+					{ text: this.transcription }, 
+					{ responseType: 'blob' }
+				)
+			);
+
+			this.statusMessage = "Playing speech...";
+			const audioURL = URL.createObjectURL(audioBlob);
+			const audio = new Audio(audioURL);
+			audio.play();
+
+			// Optionally reset status after playback starts
+			audio.onplaying = () => {
+				this.statusMessage = "Speech playing...";
+			};
+			audio.onended = () => {
+				this.statusMessage = "Speech finished.";
+			};
+		} catch (error) {
+			console.error("TTS error:", error);
+			this.statusMessage = "TTS request failed.";
 		}
 	}
 }
