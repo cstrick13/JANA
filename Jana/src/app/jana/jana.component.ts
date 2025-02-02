@@ -16,6 +16,7 @@ import { WizardConfigService } from '../wizard-config.service';
 export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   private currentSound?: THREE.Audio;
+  public isRecording = false;
   constructor(
     public wizardConfigService: WizardConfigService 
   ) {}
@@ -34,7 +35,8 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   private uniforms: { [key: string]: { value: any } } = {
     u_time: { value: 0.0 },
     u_resolution: { value: new THREE.Vector2(300, 300) },
-    u_frequency: {value: 0.0}
+    u_frequency: {value: 0.0},
+    u_color: { value: new THREE.Color(0xff0000) }
   };
 
   /** 
@@ -61,7 +63,15 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       cancelAnimationFrame(this.animationId);
     }
   }
+  resetWizard() {
+    // Set wizardFinished to false
+    this.wizardConfigService.wizardFinished = false;
+  
+    // Update local storage as well if you are storing the wizard state there
+    localStorage.setItem('wizardFinished', 'false');
+  }
 
+  
   private initThree(): void {
     // 1) Create Renderer (pass the ViewChild canvas)
     this.renderer = new THREE.WebGLRenderer({
@@ -181,7 +191,7 @@ vec3 fade(vec3 t) {
     uniform vec2 u_resolution;
     void main() {
       vec2 st = gl_FragCoord.xy / u_resolution;
-      gl_FragColor = vec4(vec3(st.x, st.y, 1.0), 1.0);
+      gl_FragColor = vec4(u_color, 1.0);
 }
   `;
   
@@ -228,46 +238,45 @@ vec3 fade(vec3 t) {
     }
   
     try {
+      // 1) Fetch TTS audio
       const response = await fetch('http://localhost:5000/tts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        // ADD speaker_id to the JSON payload
-        body: JSON.stringify({ 
-          text: textToSpeak,
-          speaker_id: 'p363'  // or another valid VCTK speaker
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSpeak, speaker_id: 'p363' }) // or your speaker of choice
       });
   
       if (!response.ok) {
-        console.error('TTS request failed', response.statusText);
+        console.error('TTS request failed:', response.statusText);
         return;
       }
   
-      // Convert to ArrayBuffer, decode, and play with Three.js Audio
-      const arrayBuffer = await response.arrayBuffer();
+      // 2) Convert response to a WAV blob
+      const audioBlob = await response.blob(); 
+      // The server should set Content-Type: audio/wav
+  
+      // 3) Create a Blob URL for Three.js to load
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
       const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
-      if (!listener) {
-        console.error('No AudioListener found on camera.');
-        return;
-      }
-  
-      const audioContext = listener.context;
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  
       const sound = new THREE.Audio(listener);
-      sound.setBuffer(audioBuffer);
-      sound.setLoop(false);
-      sound.setVolume(0.5);
-      sound.play();
-  
-      // Remember the current sound if you need to stop it later
+      const audioLoader = new THREE.AudioLoader();
       this.currentSound = sound;
-      this.analyser = new THREE.AudioAnalyser(sound, 32);
-  
+      audioLoader.load(
+        audioUrl,
+        (buffer: AudioBuffer) => {
+            sound.setBuffer(buffer);
+            sound.setLoop(false);
+            sound.setVolume(0.5);
+            sound.play();
+            this.analyser = new THREE.AudioAnalyser(sound, 32);
+        },
+        undefined,
+        (err) => {
+          console.error('Audio loading error:', err);
+        }
+      );
     } catch (error) {
-      console.error('Error fetching or playing TTS:', error);
+      console.error('Error calling TTS or playing audio:', error);
     }
   }
   
@@ -281,6 +290,12 @@ vec3 fade(vec3 t) {
         const averageFrequency = this.analyser.getAverageFrequency();
         this.uniforms['u_frequency'].value = averageFrequency;
       }
+      if (this.isRecording) {
+        this.uniforms['u_color'].value.set(0x00ff00);
+      } else {
+        this.uniforms['u_color'].value.set(0xff0000);
+      }
+      
       this.sphere.rotation.x += 0.01;
       this.sphere.rotation.z += 0.01;
 
@@ -298,6 +313,7 @@ vec3 fade(vec3 t) {
 
 
   public startRecording() {
+    this.isRecording = true;
     this.audioChunks = []; // clear previous
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
@@ -313,11 +329,13 @@ vec3 fade(vec3 t) {
       })
       .catch(error => {
         console.error('Failed to start recording:', error);
+        this.isRecording = false; 
       });
   }
 
 
   public stopRecording() {
+    this.isRecording = false; 
     if (!this.mediaRecorder) {
       console.warn('No recording in progress.');
       return;
@@ -363,33 +381,7 @@ vec3 fade(vec3 t) {
           console.error('TTS request failed', ttsResponse.statusText);
           return;
         }
-
-
-        // Get TTS audio from server and play it
-        const ttsArrayBuffer = await ttsResponse.arrayBuffer();
-
-        const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
-        if (!listener) {
-          console.error('No AudioListener found on camera.');
-          return;
-        }
-
-        // Decode the returned WAV audio
-        const audioContext = listener.context;
-        const audioBuffer = await audioContext.decodeAudioData(ttsArrayBuffer);
-
-        // Create a new THREE.Audio and play it
-        const sound = new THREE.Audio(listener);
-        sound.setBuffer(audioBuffer);
-        sound.setLoop(false);
-        sound.setVolume(0.5);
-        sound.play();
-
-        // If there's already a sound playing, you might want to stop it:
-        if (this.currentSound && this.currentSound.isPlaying) {
-          this.currentSound.stop();
-        }
-        this.currentSound = sound;
+        this.playTts(transcription);
 
       } catch (error) {
         console.error('Error in STT -> TTS flow:', error);
