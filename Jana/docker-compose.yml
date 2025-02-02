@@ -1,0 +1,15 @@
+services:
+  jana:
+    container_name: jana
+    network_mode: host
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jana-agents:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    stdin_open: true
+    tty: true
