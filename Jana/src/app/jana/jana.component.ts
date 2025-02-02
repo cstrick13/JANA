@@ -36,7 +36,6 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     u_time: { value: 0.0 },
     u_resolution: { value: new THREE.Vector2(300, 300) },
     u_frequency: {value: 0.0},
-    u_color: { value: new THREE.Color(0xff0000) }
   };
 
   /** 
@@ -191,7 +190,7 @@ vec3 fade(vec3 t) {
     uniform vec2 u_resolution;
     void main() {
       vec2 st = gl_FragCoord.xy / u_resolution;
-      gl_FragColor = vec4(u_color, 1.0);
+      gl_FragColor = vec4(vec3(st.x, st.y, 1.0), 1.0);
 }
   `;
   
@@ -290,12 +289,6 @@ vec3 fade(vec3 t) {
         const averageFrequency = this.analyser.getAverageFrequency();
         this.uniforms['u_frequency'].value = averageFrequency;
       }
-      if (this.isRecording) {
-        this.uniforms['u_color'].value.set(0x00ff00);
-      } else {
-        this.uniforms['u_color'].value.set(0xff0000);
-      }
-      
       this.sphere.rotation.x += 0.01;
       this.sphere.rotation.z += 0.01;
 
