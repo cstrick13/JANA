@@ -1,6 +1,8 @@
+<!-- Show home screen if at '/' -->
 <app-home *ngIf="router.url === '/'"></app-home>
 
-<div class="wizard-container" *ngIf="!wizardConfigService.wizardFinished">
+<!-- Show wizard only if it's not finished -->
+<div class="wizard-container" *ngIf="!wizardConfigService.wizardFinished && router.url !== '/'">
   <nav class="wizard-steps">
     <div class="circle" [class.active]="router.url === '/step1'">1</div>
     <div class="line"></div>
@@ -17,5 +19,5 @@
   </div>
 </div>
 
-<!-- Show app-jana if the wizard is finished -->
+<!-- Show app-jana only if wizard is finished -->
 <app-jana *ngIf="wizardConfigService.wizardFinished"></app-jana>
