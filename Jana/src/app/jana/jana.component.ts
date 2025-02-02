@@ -1,4 +1,3 @@
-
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
@@ -37,7 +36,6 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     u_resolution: { value: new THREE.Vector2(300, 300) },
     u_frequency: {value: 0.0}
   };
-
 
   /** 
    * Flag to detect if we're dealing with a short clip. 
@@ -179,7 +177,7 @@ vec3 fade(vec3 t) {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
     }
   `;
-  const fragmentShaderSource = `
+    const fragmentShaderSource = `
     uniform vec2 u_resolution;
     void main() {
       vec2 st = gl_FragCoord.xy / u_resolution;
@@ -219,8 +217,9 @@ vec3 fade(vec3 t) {
   
     this.camera.updateProjectionMatrix();
   }
-  async playAudio(voiceNumber: number) {
-    // If there's already an audio playing, stop it and clear the reference.
+
+  async playTts(textToSpeak: string) {
+    // 1) Stop any currently playing sound
     if (this.currentSound) {
       if (this.currentSound.isPlaying) {
         this.currentSound.stop();
@@ -228,40 +227,51 @@ vec3 fade(vec3 t) {
       this.currentSound = undefined;
     }
   
-    // Get the AudioListener attached to the camera.
-    const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
-    
-    // Create a new THREE.Audio object and store it as the current sound.
-    const sound = new THREE.Audio(listener);
-    this.currentSound = sound;
-    
-    const audioLoader = new THREE.AudioLoader();
-    audioLoader.load(
-      `/assets/voices/audio${voiceNumber}.mp3`,
-      (buffer: AudioBuffer) => {
-        // Set the audio buffer, ensure looping is off, and set volume.
-        sound.setBuffer(buffer);
-        sound.setLoop(false);
-        sound.setVolume(0.5);
-        
-        // Play the sound.
-        sound.play();
-        
-        // Optionally, if you wish to use an analyser for visuals, set it up here.
-        this.analyser = new THREE.AudioAnalyser(sound, 32);
-      },
-      undefined,
-      (err) => console.error('Audio loading error:', err)
-    );
+    // 2) Make a POST request to your Python server's /tts endpoint
+    try {
+      const response = await fetch('http://localhost:5000/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: textToSpeak })
+      });
+  
+      if (!response.ok) {
+        console.error('TTS request failed', response.statusText);
+        return;
+      }
+  
+      // 3) Get the raw audio as an ArrayBuffer
+      const arrayBuffer = await response.arrayBuffer();
+  
+      // 4) Decode and play the audio with Three.js
+      const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
+      if (!listener) {
+        console.error('No AudioListener found on camera.');
+        return;
+      }
+  
+      const audioContext = listener.context;
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  
+      const sound = new THREE.Audio(listener);
+      sound.setBuffer(audioBuffer);
+      sound.setLoop(false);
+      sound.setVolume(0.5);
+      sound.play();
+  
+      this.currentSound = sound;
+  
+    } catch (error) {
+      console.error('Error fetching or playing TTS:', error);
+    }
   }
   
-  
-
   private startAnimationLoop(): void {
     const animate = () => {
       this.animationId = requestAnimationFrame(animate);
       
-      // Update the time uniform
       // Update the time uniform
       this.uniforms['u_time'].value = this.clock.getElapsedTime();
       if (this.analyser) {
@@ -278,4 +288,122 @@ vec3 fade(vec3 t) {
     animate();
   }
 
-}
+
+  // ----------------------------------------------------------------
+  // NEW PROPERTIES for recording (No deletions, just these two lines)
+  // ----------------------------------------------------------------
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+
+  // ----------------------------------------------------------------
+  // NEW METHOD: START RECORDING (same as you have)
+  // ----------------------------------------------------------------
+  public startRecording() {
+    this.audioChunks = []; // clear previous
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        this.mediaRecorder = new MediaRecorder(stream);
+        this.mediaRecorder.start();
+        console.log('Recording started');
+
+        this.mediaRecorder.addEventListener('dataavailable', (event) => {
+          if (event.data.size > 0) {
+            this.audioChunks.push(event.data);
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Failed to start recording:', error);
+      });
+  }
+
+  // ----------------------------------------------------------------
+  // NEW METHOD: STOP RECORDING + SEND TO /transcribe -> /tts -> replay
+  // ----------------------------------------------------------------
+  public stopRecording() {
+    if (!this.mediaRecorder) {
+      console.warn('No recording in progress.');
+      return;
+    }
+    this.mediaRecorder.stop();
+    console.log('Recording stopped');
+
+    // Once the recording stops, we handle the final Blob
+    this.mediaRecorder.addEventListener('stop', async () => {
+      const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+      console.log('Recorded Blob size:', audioBlob.size);
+
+      // -----------------------------
+      // 1) Send the recorded Blob to /transcribe
+      // -----------------------------
+      try {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.wav');
+
+        // POST to /transcribe
+        const sttResponse = await fetch('http://localhost:5000/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        if (!sttResponse.ok) {
+          console.error('Transcribe request failed', sttResponse.statusText);
+          return;
+        }
+
+        const sttData = await sttResponse.json();
+        const transcription = sttData.transcription; // e.g. "Hello world"
+
+        console.log('Transcribed text:', transcription);
+
+        // -----------------------------
+        // 2) Pass the transcription to /tts
+        // -----------------------------
+        const ttsResponse = await fetch('http://localhost:5000/tts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: transcription })
+        });
+        if (!ttsResponse.ok) {
+          console.error('TTS request failed', ttsResponse.statusText);
+          return;
+        }
+
+        // -----------------------------
+        // 3) Get TTS audio from server and play it
+        // -----------------------------
+        const ttsArrayBuffer = await ttsResponse.arrayBuffer();
+
+        const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
+        if (!listener) {
+          console.error('No AudioListener found on camera.');
+          return;
+        }
+
+        // Decode the returned WAV audio
+        const audioContext = listener.context;
+        const audioBuffer = await audioContext.decodeAudioData(ttsArrayBuffer);
+
+        // Create a new THREE.Audio and play it
+        const sound = new THREE.Audio(listener);
+        sound.setBuffer(audioBuffer);
+        sound.setLoop(false);
+        sound.setVolume(0.5);
+        sound.play();
+
+        // If there's already a sound playing, you might want to stop it:
+        if (this.currentSound && this.currentSound.isPlaying) {
+          this.currentSound.stop();
+        }
+        this.currentSound = sound;
+
+      } catch (error) {
+        console.error('Error in STT -> TTS flow:', error);
+      }
+    });
+
+    this.mediaRecorder = null;
+  }
+
+} // END of JanaComponent

@@ -4,4 +4,6 @@
     <p>Command Word: {{ wizardConfigService.commandWord }}</p>
     <p>Wizard Finished: {{ wizardConfigService.wizardFinished }}</p>
     <p>Selected Audio: {{ wizardConfigService.selectedAudioSrc }}</p>
+    <button (click)="startRecording()">Start Recording</button>
+    <button (click)="stopRecording()">Stop Recording</button>
   </div>

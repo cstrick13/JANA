@@ -36,18 +36,19 @@ def tts():
 
     text_to_speak = data['text']
 
-    # Example: Send text to Coqui TTS container at port 5002
     # Adjust the URL to match your TTS container's actual endpoint
-    coqui_url = 'http://coqui-tts:5002/api/tts'  # If inside Docker network
+    coqui_url = 'http://localhost:5002/api/tts'  # If inside Docker network
     # Or if testing locally: 'http://localhost:5002/api/tts'
 
     # Pass text as JSON (depends on how your TTS container expects data)
+    print("Sending text to TTS:", text_to_speak)
     response = requests.post(coqui_url, json={'text': text_to_speak})
+
 
     if response.status_code != 200:
         return jsonify({'error': 'TTS request failed'}), 500
 
-    # The TTS container is expected to return raw audio or some audio stream
+    # Return raw audio or some audio stream
     audio_data = response.content
 
     # Return as an audio file (e.g. WAV) with the proper mime type
