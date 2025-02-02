@@ -25,37 +25,45 @@ def transcribe():
 
     return jsonify({"transcription": transcription["text"]})
 
+
 @app.route('/tts', methods=['POST'])
 def tts():
     """
-    Receives text, sends it to the Coqui TTS container, returns audio data to the client.
+    Receives text and an optional speaker_id, sends it to the Coqui TTS container, 
+    and returns audio data to the client.
     """
     data = request.get_json()
     if not data or 'text' not in data:
         return jsonify({'error': 'No text provided'}), 400
+    print("DEBUG /tts route got data:", data)
+
 
     text_to_speak = data['text']
 
-    # Adjust the URL to match your TTS container's actual endpoint
-    coqui_url = 'http://localhost:5002/api/tts'  # If inside Docker network
-    # Or if testing locally: 'http://localhost:5002/api/tts'
+    # If the client doesn't provide a speaker_id, default to "p225"
+    speaker_id = data.get('speaker_id', 'p363')  
 
-    # Pass text as JSON (depends on how your TTS container expects data)
+    # Adjust the URL if your TTS container runs elsewhere
+    coqui_url = 'http://localhost:5002/api/tts'
+
+    # Pass text (and speaker_id) as JSON
     print("Sending text to TTS:", text_to_speak)
-    response = requests.post(coqui_url, json={'text': text_to_speak})
+    print("Using speaker_id:", speaker_id)
 
+    # If your model also needs language_id or other fields, add them similarly:
+    #   language_id = data.get('language_id', 'en')
+    #   payload = {'text': text_to_speak, 'speaker_id': speaker_id, 'language_id': language_id}
+    #   response = requests.post(coqui_url, json=payload)
+
+    payload = {"text": text_to_speak, "speaker_id": "p363"}
+    response = requests.post(coqui_url, data=payload)
 
     if response.status_code != 200:
         return jsonify({'error': 'TTS request failed'}), 500
 
-    # Return raw audio or some audio stream
+    # Return raw audio data as WAV
     audio_data = response.content
-
-    # Return as an audio file (e.g. WAV) with the proper mime type
-    return Response(
-        audio_data,
-        mimetype='audio/wav'
-    )
+    return Response(audio_data, mimetype='audio/wav')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

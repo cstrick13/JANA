@@ -219,7 +219,7 @@ vec3 fade(vec3 t) {
   }
 
   async playTts(textToSpeak: string) {
-    // 1) Stop any currently playing sound
+    // If there's already a sound playing, stop it
     if (this.currentSound) {
       if (this.currentSound.isPlaying) {
         this.currentSound.stop();
@@ -227,14 +227,17 @@ vec3 fade(vec3 t) {
       this.currentSound = undefined;
     }
   
-    // 2) Make a POST request to your Python server's /tts endpoint
     try {
       const response = await fetch('http://localhost:5000/tts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text: textToSpeak })
+        // ADD speaker_id to the JSON payload
+        body: JSON.stringify({ 
+          text: textToSpeak,
+          speaker_id: 'p363'  // or another valid VCTK speaker
+        })
       });
   
       if (!response.ok) {
@@ -242,10 +245,8 @@ vec3 fade(vec3 t) {
         return;
       }
   
-      // 3) Get the raw audio as an ArrayBuffer
+      // Convert to ArrayBuffer, decode, and play with Three.js Audio
       const arrayBuffer = await response.arrayBuffer();
-  
-      // 4) Decode and play the audio with Three.js
       const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
       if (!listener) {
         console.error('No AudioListener found on camera.');
@@ -261,7 +262,9 @@ vec3 fade(vec3 t) {
       sound.setVolume(0.5);
       sound.play();
   
+      // Remember the current sound if you need to stop it later
       this.currentSound = sound;
+      this.analyser = new THREE.AudioAnalyser(sound, 32);
   
     } catch (error) {
       console.error('Error fetching or playing TTS:', error);
@@ -289,15 +292,11 @@ vec3 fade(vec3 t) {
   }
 
 
-  // ----------------------------------------------------------------
-  // NEW PROPERTIES for recording (No deletions, just these two lines)
-  // ----------------------------------------------------------------
+
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
 
-  // ----------------------------------------------------------------
-  // NEW METHOD: START RECORDING (same as you have)
-  // ----------------------------------------------------------------
+
   public startRecording() {
     this.audioChunks = []; // clear previous
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -317,9 +316,7 @@ vec3 fade(vec3 t) {
       });
   }
 
-  // ----------------------------------------------------------------
-  // NEW METHOD: STOP RECORDING + SEND TO /transcribe -> /tts -> replay
-  // ----------------------------------------------------------------
+
   public stopRecording() {
     if (!this.mediaRecorder) {
       console.warn('No recording in progress.');
@@ -333,9 +330,8 @@ vec3 fade(vec3 t) {
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
       console.log('Recorded Blob size:', audioBlob.size);
 
-      // -----------------------------
-      // 1) Send the recorded Blob to /transcribe
-      // -----------------------------
+
+      // Send the recorded Blob to /transcribe
       try {
         const formData = new FormData();
         formData.append('audio', audioBlob, 'recording.wav');
@@ -355,9 +351,7 @@ vec3 fade(vec3 t) {
 
         console.log('Transcribed text:', transcription);
 
-        // -----------------------------
-        // 2) Pass the transcription to /tts
-        // -----------------------------
+        // Pass the transcription to /tts
         const ttsResponse = await fetch('http://localhost:5000/tts', {
           method: 'POST',
           headers: {
@@ -370,9 +364,8 @@ vec3 fade(vec3 t) {
           return;
         }
 
-        // -----------------------------
-        // 3) Get TTS audio from server and play it
-        // -----------------------------
+
+        // Get TTS audio from server and play it
         const ttsArrayBuffer = await ttsResponse.arrayBuffer();
 
         const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
