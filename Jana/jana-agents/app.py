@@ -209,8 +209,7 @@ def create_team():
         When assigning tasks, use this format:
         1. <agent> : <task>
 
-        You only have the ability to assign tasks to the agents, you do NOT have the ability to perform any other tasks.
-        Once all the tasks have been finished, summarize the results and output the following:
+        Once all the tasks have been finished, OR the users request has been fufilled with no more tasks, summarize the results and output the following:
         'exit'
         """
     )
@@ -231,6 +230,7 @@ import os
 import json
 import asyncio
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -248,6 +248,13 @@ team = create_team()
 
 # Create the FastAPI app
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],                # Allow all origins, or specify your frontend's domain
+    allow_methods=["GET", "POST", "OPTIONS"],  # Allow these HTTP methods
+    allow_headers=["Content-Type", "Accept"],  # Allow these headers
+)
 
 @app.get("/")
 async def index():
