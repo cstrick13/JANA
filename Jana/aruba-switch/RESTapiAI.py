@@ -14,7 +14,7 @@ TIMEOUT = 5
 session_id = None
 
 # Login function - stores session id
-async def login_to_switch():
+def login_to_switch():
 
     # Debug message
     print("\n\n====== LOGGING IN TO SWITCH ======\n\n")
@@ -36,7 +36,7 @@ async def login_to_switch():
         print(f"\n\n====== Login successful, session_id: {session_id} ======\n\n")
 
         return session_id
-    
+
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         print(f"Login failed: {e}")
@@ -46,7 +46,7 @@ async def login_to_switch():
         return f"Request timed out: {e}"
 
 # Logout function
-async def logout_from_switch():
+def logout_from_switch():
 
     # Debug message
     print("\n\n====== LOGGING OUT FROM SWITCH ======\n\n")
@@ -67,7 +67,7 @@ async def logout_from_switch():
         print(f"\n\n====== Logout successful, session_id: {session_id} ======\n\n")
 
         return True
-    
+
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         print(f"Logout failed: {e}")
@@ -77,7 +77,7 @@ async def logout_from_switch():
         return f"Request timed out: {e}"
 
 # System information function
-async def get_system_info():
+def get_system_info():
 
     # Debug message
     print("\n\n====== FETCHING SYSTEM INFO ======\n\n")
@@ -98,7 +98,7 @@ async def get_system_info():
         print(f"\n\n====== Fetch system info successful, session_id: {session_id} ======\n\n")
 
         return response.json()
-    
+
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         print(f"Failed to fetch system info: {e}")
@@ -108,7 +108,7 @@ async def get_system_info():
         return f"Request timed out: {e}"
 
 # Execute command function
-async def execute_command(session_id: Annotated[str, "The token used to authenticate to switch"], command: Annotated[str, "The command to execute"]):
+def execute_command(session_id: Annotated[str, "The token used to authenticate to switch"], command: Annotated[str, "The command to execute"]):
 
     # Debug message
     print(f"\n\n====== EXECUTING COMMAND '{command}' ======\n\n")
@@ -122,7 +122,7 @@ async def execute_command(session_id: Annotated[str, "The token used to authenti
         "Cookie": 'sessionId=' + session_id,
         "Content-Type": "application/json"
     }
-    
+
     # Set the command payload
     data = json.dumps({"cmd": command})
 
@@ -143,7 +143,7 @@ async def execute_command(session_id: Annotated[str, "The token used to authenti
         else:
             print("Error: 'result_base64_encoded' key not found in response.")
             return "Error: 'result_base64_encoded' key not found in response."
-            
+
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         print(f"Failed to execute command: {e}")
@@ -167,21 +167,21 @@ async def execute_command(session_id: Annotated[str, "The token used to authenti
 
 ## Subset of the execute_command function ##
 # Reboot switch function
-async def reboot_switch(session_id: Annotated[str, "The session ID to execute the command on."]):
+def reboot_switch(session_id: Annotated[str, "The session ID to execute the command on."]):
     command = "reload"
     return execute_command(session_id, command)
 
 # Get switch version function
-async def get_switch_version(session_id: Annotated[str, "The session ID to execute the command on."]):
+def get_switch_version(session_id: Annotated[str, "The session ID to execute the command on."]):
     command = "show version"
     return execute_command(session_id, command)
 
 # Get switch logs function
-async def get_switch_logs(session_id: Annotated[str, "The session ID to execute the command on."]):
+def get_switch_logs(session_id: Annotated[str, "The session ID to execute the command on."]):
     command = "show log"
     return execute_command(session_id, command)
 
 # Get switch time function
-async def get_switch_time(session_id: Annotated[str, "The session ID to execute the command on."]):
+def get_switch_time(session_id: Annotated[str, "The session ID to execute the command on."]):
     command = "clock"
     return execute_command(session_id, command)
