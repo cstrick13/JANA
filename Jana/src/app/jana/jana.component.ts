@@ -17,6 +17,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   private currentSound?: THREE.Audio;
   public isRecording = false;
+  public isWaitingForAgent = false;
   constructor(
     public wizardConfigService: WizardConfigService 
   ) {}
@@ -293,6 +294,15 @@ vec3 fade(vec3 t) {
         const averageFrequency = this.analyser.getAverageFrequency();
         this.uniforms['u_frequency'].value = averageFrequency;
       }
+      if (this.isWaitingForAgent) {
+        const time = this.clock.getElapsedTime();
+        // Adjust amplitude and speed as desired:
+        const scaleFactor = 1 + 0.2 * Math.sin(time * 2.0);
+        this.sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      } else {
+        // Otherwise, reset scale to normal.
+        this.sphere.scale.set(1, 1, 1);
+      }
       this.sphere.rotation.x += 0.01;
       this.sphere.rotation.z += 0.01;
 
@@ -341,17 +351,17 @@ vec3 fade(vec3 t) {
     }
     this.mediaRecorder.stop();
     console.log('Recording stopped');
-
+  
     // Once the recording stops, we handle the final Blob
     this.mediaRecorder.addEventListener('stop', async () => {
       try {
         // 1) Build our audio Blob for transcription
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
         console.log('Recorded Blob size:', audioBlob.size);
-  
+    
         const formData = new FormData();
         formData.append('audio', audioBlob, 'recording.wav');
-  
+    
         // 2) Transcribe
         const sttResponse = await fetch('http://localhost:5000/transcribe', {
           method: 'POST',
@@ -364,8 +374,11 @@ vec3 fade(vec3 t) {
         const sttData = await sttResponse.json();
         const transcription = sttData.transcription; 
         console.log('Transcribed text:', transcription);
-  
+    
         // 3) Pass transcript to the Agent, requesting SSE
+        // Set the waiting flag to true
+        this.isWaitingForAgent = true;
+    
         const agentResponse = await fetch('http://localhost:8000/run_task', {
           method: 'POST',
           headers: {
@@ -376,19 +389,21 @@ vec3 fade(vec3 t) {
         });
         if (!agentResponse.ok) {
           console.error('Agent request failed', agentResponse.statusText);
+          this.isWaitingForAgent = false;
           return;
         }
-  
+    
         // 4) Read SSE stream and only keep the final message
         const reader = agentResponse.body?.getReader();
         if (!reader) {
           console.error('No reader available for agentResponse');
+          this.isWaitingForAgent = false;
           return;
         }
-  
+    
         const decoder = new TextDecoder();
         let finalReply = 'No response yet';
-  
+    
         while (true) {
           const { value, done } = await reader.read();
           if (done) {
@@ -401,23 +416,22 @@ vec3 fade(vec3 t) {
           // data: {"type":"text","message":"..."}
           // data: {"type":"Result","message":"Final text"}
           // data: {"status":"completed"}
-  
+    
           const lines = chunkText.split('\n');
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const jsonStr = line.slice('data: '.length).trim();
               try {
                 const message = JSON.parse(jsonStr);
-  
-                // If we see {"type":"Result"}, that's presumably final
+    
+                // If we see {"type":"Result"}, that's presumably the final reply.
                 if (message.type === 'Result') {
                   finalReply = message.message;
                   console.log('Got final message from SSE:', finalReply);
                 }
-                // If we see {"status":"completed"}, we're done
+                // If we see {"status":"completed"}, we're done.
                 if (message.status === 'completed') {
                   console.log('SSE stream completed');
-                  // optionally stop reading
                   await reader.cancel();
                   break;
                 }
@@ -427,10 +441,13 @@ vec3 fade(vec3 t) {
             }
           }
         }
-  
+    
         // 5) finalReply is the agent's result
         console.log('Final agent reply:', finalReply);
-  
+    
+        // Reset waiting flag now that the agent response is complete
+        this.isWaitingForAgent = false;
+    
         // 6) Send the final reply to TTS
         const ttsResponse = await fetch('http://localhost:5000/tts', {
           method: 'POST',
@@ -441,16 +458,18 @@ vec3 fade(vec3 t) {
           console.error('TTS request failed', ttsResponse.statusText);
           return;
         }
-  
+    
         // 7) Play the TTS audio of the final reply
         this.playTts(finalReply);
-  
+    
       } catch (error) {
         console.error('Error in STT -> Agent -> TTS flow:', error);
+        this.isWaitingForAgent = false;
       }
     });
-  
+    
     this.mediaRecorder = null;
   }
+  
 
 } // END of JanaComponent
