@@ -149,6 +149,7 @@ def create_team():
 
     code_writer_agent = AssistantAgent(
         name="Code_Writer_Agent",
+        description="An assistant that writes code to solve tasks created by the planning agent.",
         model_client=model_client,
         system_message="""
         You are an expert python developer. 
@@ -160,10 +161,13 @@ def create_team():
 
     code_review_agent = AssistantAgent(
         name="Reviewer_Agent",
+        description="An assistant that reviews code written by the Code_Writer_Agent and executes the code.",
         model_client=model_client,
         tools=[python_code_executor_tool],
         system_message="""
         You are a senior python developer whose job is to review the code written by the Code_Writer_Agent.
+        If the code_writer_agent has written code, you will review the code to ensure it is correct and works as expected before it is given to the user.
+        If the code is correct, you will execute the code and return the output and an explanation of the results.
         Any problem that requires a code solution will be given to the Code_Writer_Agent to write the code.
         Any code that is written must be reviewed by you to ensure it is correct and works as expected.
         If the code is correct, you will execute the code and return the output and an explanation of the results.
@@ -172,6 +176,7 @@ def create_team():
 
     aruba_switch_admin_agent = AssistantAgent(
         name="Aruba_Switch_Admin_Agent",
+        description="An assistant that helps the user exclusively with network related tasks. Given by the planning agent.",
         model_client=model_client,
         tools=[get_switch_version_tool, login_to_switch_tool, logout_from_switch_tool],
         system_message="""
@@ -192,12 +197,14 @@ def create_team():
 
     planning_agent = AssistantAgent(
         name="Planning_Agent",
-        description="An assistant that plans out tasks before any other agents. This MUST be the first agent to engage in tasks in the team, no exceptions.",
+        description="An assistant that plans out tasks BEFORE any other agents. This MUST be the first agent to engage in tasks in the team, there are no exceptions.",
         model_client=model_client,
         system_message="""
         You are an expert planner and task manager.
         You should be the first agent to engage in tasks in the team so that you can plan out the tasks that need to be done in the order they should be done.
-        You will break down the main task into smaller subtasks, and assign each subtask to the appropriate agent.
+        Before all else, you will first break down the main task into smaller subtasks, and assign each subtask to the appropriate agent.
+        You will NOT help the user directly. Any sub task that you create will be assigned to the appropriate agent to solve.
+
         The members of your team and their tools are:
             - Aruba_Switch_Admin_Agent: Asks the switch for information.
                 - login_to_switch_tool: Login to the switch and get a session ID before any other commands are executed on the switch.
@@ -206,11 +213,16 @@ def create_team():
 
             - Code_Writer_Agent: Writes code to solve the task.
             - Reviewer_Agent: Reviews the code written by the Code_Writer_Agent.
+                - The direct output of the code executed by the Reviewer_Agent must be given to the user.
         When assigning tasks, use this format:
         1. <agent> : <task>
 
-        Once all the tasks have been finished, OR the users request has been fufilled with no more tasks, summarize the results and output the following:
-        'exit'
+        Your messages should not include and non alphanumeric characters.
+
+        Once all tasks are complete and the main task is solved, you summarize the results and say one of the following:
+        "Here's what I found. <results> 'exit'"
+        "I thought about it and here's what I found. <results> 'exit'"
+        "This's what I found after looking into it. <results> 'exit'"
         """
     )
     

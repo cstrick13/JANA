@@ -36,7 +36,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   private clock = new THREE.Clock();
   private uniforms: { [key: string]: { value: any } } = {
     u_time: { value: 0.0 },
-    u_resolution: { value: new THREE.Vector2(300, 300) },
+    u_resolution: { value: new THREE.Vector2(800, 800) },
     u_frequency: {value: 0.0},
     u_isRecording: { value: 0.0 }
   };
