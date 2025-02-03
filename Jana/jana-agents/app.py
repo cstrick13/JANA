@@ -22,6 +22,7 @@ import random
 import os
 
 from dotenv import load_dotenv
+import RESTapiAI as RESTapi
 
 SWITCH_IP = '192.168.1.1'
 USERNAME = 'admin'
@@ -30,13 +31,11 @@ PASSWORD = 'admin'
 # Default switch base url information
 BASE_URL = "http://{switch_ip}"
 
-# Timeout value in seconds
+# Constants
 TIMEOUT = 5
-
-# Global session ID
 session_id = None
 
-
+"""
 ########################################################
 # Login and logout functions
 ########################################################
@@ -128,12 +127,17 @@ def get_switch_version(session_id: Annotated[str, "The session ID to execute the
     command = "show version"
     return execute_command(session_id, command)
 
+"""
+
 
 # Create a function tool.
-login_to_switch_tool = FunctionTool(login_to_switch, description="Login to the switch. This should be done before any other commands are executed on the switch.")
-get_switch_version_tool = FunctionTool(get_switch_version, description="Get the version of the switch.")
-logout_from_switch_tool = FunctionTool(logout_from_switch, description="Logout from the switch. This should be used when you are done with the task and need to logout from the switch.")
-
+login_to_switch_tool = FunctionTool(RESTapi.login_to_switch, description="Login to the switch. This should be done before any other commands are executed on the switch.")
+logout_from_switch_tool = FunctionTool(RESTapi.logout_from_switch, description="Logout from the switch. This should be used when you are done with the task and need to logout from the switch.")
+get_system_info_tool = FunctionTool(RESTapi.get_system_info, description="Get the system information of the switch.")
+reboot_switch_tool = FunctionTool(RESTapi.reboot_switch, description="Reboot the switch.")
+get_switch_version_tool = FunctionTool(RESTapi.get_switch_version, description="Get the version of the switch.")
+get_switch_logs_tool = FunctionTool(RESTapi.get_switch_logs, description="Get the logs of the switch.")
+get_switch_time_tool = FunctionTool(RESTapi.get_switch_time, description="Get the time of the switch.")
 
 def create_team():
     # Run the tool.
@@ -178,7 +182,7 @@ def create_team():
         name="Aruba_Switch_Admin_Agent",
         description="An assistant that helps the user exclusively with network related tasks. Given by the planning agent.",
         model_client=model_client,
-        tools=[get_switch_version_tool, login_to_switch_tool, logout_from_switch_tool],
+        tools=[login_to_switch_tool, logout_from_switch_tool, get_system_info_tool, reboot_switch_tool, get_switch_version_tool, get_switch_logs_tool, get_switch_time_tool],
         system_message="""
         You are a network administrator that helps the user with network related tasks. You have access to a single aruba switch.
         This switch has a limited number of commands available to you.
@@ -186,8 +190,13 @@ def create_team():
         If you have already logged in, you can use the get_aruba_switch_session_tool to get a session ID.
         These commands are listed in your tools:
             - login_to_switch_tool: Login to the switch and get a session ID.
-            - get_switch_version_tool: Get the version of the switch.
             - logout_from_switch_tool: Logout from the switch ONLY when all tasks are complete and you are done.
+            - get_system_info_tool: Get the system information of the switch.
+            - reboot_switch_tool: Reboot the switch.
+            - get_switch_version_tool: Get the version of the switch.
+            - get_switch_logs_tool: Get the logs of the switch.
+            - get_switch_time_tool: Get the time of the switch.
+            
 
         You will only use these commands and the outputs of these commands to answer the user's question.
         You will not use any other commands, or any other information to answer the user's question.
@@ -207,9 +216,13 @@ def create_team():
 
         The members of your team and their tools are:
             - Aruba_Switch_Admin_Agent: Asks the switch for information.
-                - login_to_switch_tool: Login to the switch and get a session ID before any other commands are executed on the switch.
+                - login_to_switch_tool: Login to the switch and get a session ID.
+                - logout_from_switch_tool: Logout from the switch ONLY when all tasks are complete and you are done.
+                - get_system_info_tool: Get the system information of the switch.
+                - reboot_switch_tool: Reboot the switch.
                 - get_switch_version_tool: Get the version of the switch.
-                - logout_from_switch_tool: Logout from the switch after all tasks are complete and you are done.
+                - get_switch_logs_tool: Get the logs of the switch.
+                - get_switch_time_tool: Get the time of the switch.
 
             - Code_Writer_Agent: Writes code to solve the task.
             - Reviewer_Agent: Reviews the code written by the Code_Writer_Agent.
