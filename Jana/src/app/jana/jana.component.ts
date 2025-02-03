@@ -36,6 +36,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     u_time: { value: 0.0 },
     u_resolution: { value: new THREE.Vector2(300, 300) },
     u_frequency: {value: 0.0},
+    u_isRecording: { value: 0.0 }
   };
 
   /** 
@@ -188,9 +189,12 @@ vec3 fade(vec3 t) {
   `;
     const fragmentShaderSource = `
     uniform vec2 u_resolution;
+    uniform float u_isRecording;
     void main() {
       vec2 st = gl_FragCoord.xy / u_resolution;
-      gl_FragColor = vec4(vec3(st.x, st.y, 1.0), 1.0);
+      vec4 normalColor = vec4(st.x, st.y, 1.0, 1.0);
+      vec4 recordingColor = vec4(1.0, 0.435, 0.38, 1.0);
+      gl_FragColor = mix(normalColor, recordingColor, u_isRecording);
 }
   `;
   
@@ -307,6 +311,7 @@ vec3 fade(vec3 t) {
 
   public startRecording() {
     this.isRecording = true;
+    this.uniforms['u_isRecording'].value = 1.0;
     this.audioChunks = []; // clear previous
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
@@ -328,7 +333,8 @@ vec3 fade(vec3 t) {
 
 
   public stopRecording() {
-    this.isRecording = false; 
+    this.isRecording = false;
+    this.uniforms['u_isRecording'].value = 0.0; 
     if (!this.mediaRecorder) {
       console.warn('No recording in progress.');
       return;
