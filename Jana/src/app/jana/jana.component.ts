@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { Router, RouterModule, RouterOutlet } from '@angular/router';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -19,7 +19,8 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   public isRecording = false;
   public isWaitingForAgent = false;
   constructor(
-    public wizardConfigService: WizardConfigService 
+    public wizardConfigService: WizardConfigService,
+    private router: Router
   ) {}
 
   private audioContext!: AudioContext;
@@ -69,7 +70,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     this.wizardConfigService.wizardFinished = false;
   
     // Update local storage as well if you are storing the wizard state there
-    localStorage.setItem('wizardFinished', 'false');
+    this.router.navigate(["/"]);
   }
 
   
@@ -193,7 +194,7 @@ vec3 fade(vec3 t) {
     uniform float u_isRecording;
     void main() {
       vec2 st = gl_FragCoord.xy / u_resolution;
-      vec4 normalColor = vec4(st.x, st.y, 1.0, 1.0);
+      vec4 normalColor = vec4(vec3(st.x, st.y, 1.0), 1.0);
       vec4 recordingColor = vec4(1.0, 0.435, 0.38, 1.0);
       gl_FragColor = mix(normalColor, recordingColor, u_isRecording);
 }
