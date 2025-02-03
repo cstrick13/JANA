@@ -2,3 +2,7 @@ autogen-agentchat
 autogen-ext[openai]
 python-dotenv
 flask
+hypercorn
+asgiref
+fastapi
+uvicorn

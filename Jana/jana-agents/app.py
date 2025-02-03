@@ -1,26 +1,27 @@
-import os
-import tempfile
-import random
-
-from autogen_core import CancellationToken
-from autogen_core.tools import FunctionTool
-from typing_extensions import Annotated
-
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
-from autogen_agentchat.ui import Console
-from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor   
+from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor  
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from autogen_agentchat.conditions import TextMentionTermination, MaxMessageTermination
 from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
+from autogen_agentchat.messages import TextMessage, ToolCallRequestEvent, ToolCallExecutionEvent, ToolCallSummaryMessage
 
+from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_agentchat.ui import Console
 
+from autogen_core.tools import FunctionTool
+from autogen_core import CancellationToken
 
-
+from typing_extensions import Annotated
 import requests
-import json
+import tempfile
 import base64
+import asyncio
+import json
+import random
+import os
+
+from dotenv import load_dotenv
 
 SWITCH_IP = '192.168.1.1'
 USERNAME = 'admin'
@@ -32,7 +33,13 @@ BASE_URL = "http://{switch_ip}"
 # Timeout value in seconds
 TIMEOUT = 5
 
+# Global session ID
 session_id = None
+
+
+########################################################
+# Login and logout functions
+########################################################
 
 # Login function
 def login_to_switch():
@@ -53,7 +60,8 @@ def login_to_switch():
     except requests.exceptions.Timeout as e:
         print(f"Request timed out: {e}")
         return None
-    
+
+# Logout function
 def logout_from_switch():
     print("\n\n====== LOGGING OUT FROM SWITCH ======\n\n")
     base_url = BASE_URL.format(switch_ip=SWITCH_IP)
@@ -86,6 +94,7 @@ def get_system_info():
         print(f"Request timed out: {e}")
         return None
 
+# Execute switch command function
 def execute_command(sessiont_id, command):
     base_url = BASE_URL.format(switch_ip=SWITCH_IP)
     execute_url = f"{base_url}/rest/v3/cli"
@@ -114,14 +123,10 @@ def execute_command(sessiont_id, command):
     
     return None
 
+# Get switch version function
 def get_switch_version(session_id: Annotated[str, "The session ID to execute the command on."]):
     command = "show version"
     return execute_command(session_id, command)
-
-
-async def test_tool(param: Annotated[str, "The parameter to test the tool with."]) -> str:
-    # This is a test tool to test the tool.
-    return "Hello, world!"
 
 
 # Create a function tool.
@@ -129,7 +134,8 @@ login_to_switch_tool = FunctionTool(login_to_switch, description="Login to the s
 get_switch_version_tool = FunctionTool(get_switch_version, description="Get the version of the switch.")
 logout_from_switch_tool = FunctionTool(logout_from_switch, description="Logout from the switch. This should be used when you are done with the task and need to logout from the switch.")
 
-async def main():
+
+def create_team():
     # Run the tool.
     model_client = OpenAIChatCompletionClient(
         model="gpt-4o-mini",
@@ -197,6 +203,9 @@ async def main():
                 - login_to_switch_tool: Login to the switch and get a session ID before any other commands are executed on the switch.
                 - get_switch_version_tool: Get the version of the switch.
                 - logout_from_switch_tool: Logout from the switch after all tasks are complete and you are done.
+
+            - Code_Writer_Agent: Writes code to solve the task.
+            - Reviewer_Agent: Reviews the code written by the Code_Writer_Agent.
         When assigning tasks, use this format:
         1. <agent> : <task>
 
@@ -216,18 +225,87 @@ async def main():
         model_client=model_client
     )
 
-    task = ""
-    await Console(
-        team.run_stream(task=task)
+    return team
+
+import os
+import json
+import asyncio
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+# Load environment variables from .env
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 8000))
+
+# Assume create_team() is defined/imported from your project
+# For example:
+# from your_team_module import create_team
+team = create_team()
+
+# Create the FastAPI app
+app = FastAPI()
+
+@app.get("/")
+async def index():
+    return {"message": "Jana is running"}
+
+# Define a Pydantic model for the incoming request
+class TaskRequest(BaseModel):
+    task: str
+
+@app.post("/run_task")
+async def run_task_route(task_request: TaskRequest):
+    task = task_request.task
+    print(f"Running task: {task}")
+    
+    if not task:
+        raise HTTPException(status_code=400, detail="No task provided")
+
+    async def generate():
+        try:
+            # Get the async stream directly from the team
+            stream = team.run_stream(task=task)
+            async for message in stream:
+
+                print("message: ", message)
+                print("type: ", type(message))
+                if isinstance(message, TextMessage):
+                    message_data = {
+                        "type": "text",
+                        "message": str(message.content)
+                    }
+                elif isinstance(message, ToolCallRequestEvent) or isinstance(message, ToolCallExecutionEvent) or isinstance(message, ToolCallSummaryMessage):
+                    message_data = {
+                        "type": "tool_call",
+                        "message": str(message.content)
+                    }
+                else:
+                    message_data = {
+                        "type": "Result",
+                        "message": str(message.messages[-1].content)
+                    }
+                # Format each message as an SSE (Server-Sent Event) line
+                yield f"data: {json.dumps(message_data)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            yield "data: {\"status\": \"completed\"}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
     )
 
-
-# Run the async main function
 if __name__ == "__main__":
-    import asyncio
-    from dotenv import load_dotenv
-
-    # Load the env variables from the .env file
-    load_dotenv()
-    openai_api_key = os.getenv("OPENAI_API_KEY")    
-    asyncio.run(main())
+    import uvicorn
+    print("Starting Jana...")
+    uvicorn.run(app, host=HOST, port=PORT)

@@ -42,3 +42,11 @@ testem.log
 Thumbs.db
 
 .env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
