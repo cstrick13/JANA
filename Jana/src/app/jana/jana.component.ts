@@ -5,11 +5,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-jana',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterModule],
+  imports: [CommonModule, RouterOutlet, RouterModule,FormsModule],
   templateUrl: './jana.component.html',
   styleUrl: './jana.component.css'
 })
@@ -46,6 +47,8 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
    * (For an extra visual "boost") 
    */
   private isShortClip = false;
+  public chatMessages: string[] = [];
+  public newChatMessage: string = '';
 
   ngOnInit() {
     console.log('User Name:', this.wizardConfigService.userName);
@@ -63,6 +66,69 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     // Clean up the animation loop
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
+    }
+  }
+  sendChatMessage() {
+    if (this.newChatMessage.trim()) {
+      this.chatMessages.push(`You: ${this.newChatMessage}`);
+      // Instead of simulating a response, call the agent:
+      this.sendToAgent(this.newChatMessage);
+      this.newChatMessage = '';
+    }
+  }
+  async sendToAgent(text: string) {
+    try {
+      const agentResponse = await fetch('http://localhost:8000/run_task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify({ task: text })
+      });
+      if (!agentResponse.ok) {
+        console.error('Agent request failed', agentResponse.statusText);
+        this.chatMessages.push("Jana: Agent request failed.");
+        return;
+      }
+      const reader = agentResponse.body?.getReader();
+      if (!reader) {
+        console.error('No reader available for agentResponse');
+        this.chatMessages.push("Jana: No agent response available.");
+        return;
+      }
+      const decoder = new TextDecoder();
+      let finalReply = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunkText = decoder.decode(value, { stream: true });
+        console.log('SSE chunk from agent:', chunkText);
+        const lines = chunkText.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice('data: '.length).trim();
+            try {
+              const message = JSON.parse(jsonStr);
+              if (message.type === 'Result') {
+                finalReply = message.message;
+              }
+              if (message.status === 'completed') {
+                console.log('SSE stream completed');
+                await reader.cancel();
+                break;
+              }
+            } catch (err) {
+              console.error('Error parsing SSE chunk:', err);
+            }
+          }
+        }
+      }
+      console.log('Final agent reply:', finalReply);
+      this.chatMessages.push(`Jana: ${finalReply}`);
+    } catch (error) {
+      console.error('Error sending chat to agent:', error);
+      this.chatMessages.push("Jana: Error processing your message.");
     }
   }
   resetWizard() {
