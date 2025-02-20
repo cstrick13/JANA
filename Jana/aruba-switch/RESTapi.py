@@ -2,16 +2,19 @@ from typing_extensions import Annotated
 import requests
 import json
 import base64
+import time
 
 # Default switch base url information
-SWITCH_IP = '192.168.1.1'
-USERNAME = 'admin'
-PASSWORD = 'admin'
+SWITCH_IP = '10.0.150.100'  # Redact, will be removed in the final version
+USERNAME = 'admin'          # Redact, will be removed in the final version
+PASSWORD = 'admin'          # Redact, will be removed in the final version
 BASE_URL = "http://{switch_ip}"
 
 # Constants
-TIMEOUT = 5
+TIMEOUT = 20
 session_id = None
+
+###### ARUBA OS-S REST API FUNCTIONS ######
 
 # Login function - stores session id
 def login_to_switch(switch_ip: Annotated[str, "The IP address of the switch"], 
@@ -66,6 +69,7 @@ def logout_from_switch(switch_ip: Annotated[str, "The IP address of the switch"]
         return False
 
 # System information function
+# Might be redundent
 def get_system_info(switch_ip: Annotated[str, "The IP address of the switch"], 
                     session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
 
@@ -108,8 +112,18 @@ def execute_command(switch_ip: Annotated[str, "The IP address of the switch"],
     # Set the command payload
     data = json.dumps({"cmd": command})
 
+    # Check if the command is a reboot command
+    if command == "reload":
+        print(f"Executing command: {command}")
+        response = requests.post(execute_url, headers=headers, data=data, verify=False, timeout=TIMEOUT)
+        print("Switch is rebooting. Please wait for a few minutes.")
+        time.sleep(120)
+        return True
+
     # Send the POST request to execute the command
     try:
+        print(f"Executing command: {command}")
+        
         response = requests.post(execute_url, headers=headers, data=data, verify=False, timeout=TIMEOUT)
         response.raise_for_status()
 
@@ -127,12 +141,6 @@ def execute_command(switch_ip: Annotated[str, "The IP address of the switch"],
         print(f"Failed to execute command: {e}")
         return False
     except requests.exceptions.Timeout as e:
-
-        # Check if the command is a reboot command
-        if command == "reload":
-            print("Switch is rebooting. Please wait for a few minutes.")
-            return True
-
         print(f"Request timed out: {e}")
         return False
     except json.JSONDecodeError:
@@ -162,4 +170,29 @@ def get_switch_time(switch_ip: Annotated[str, "The IP address of the switch"],
 def get_switch_logs(switch_ip: Annotated[str, "The IP address of the switch"],
                     session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
     command = "show log"
+    return execute_command(switch_ip, session_id, command)
+
+# Get recent switch logs function
+def get_recent_switch_logs(switch_ip: Annotated[str, "The IP address of the switch"],
+                           session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
+    command = "show log r"
+    return execute_command(switch_ip, session_id, command)
+
+# Get MAC address table function
+def get_mac_address_table(switch_ip: Annotated[str, "The IP address of the switch"],
+                          session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
+    command = "show mac-address"
+    return execute_command(switch_ip, session_id, command)
+
+# Get LLDP information function (discover information about their directly connected neighbors)
+def get_lldp_info_remote_device(switch_ip: Annotated[str, "The IP address of the switch"],
+                                session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
+    command = "show lldp info remote-device"
+    return execute_command(switch_ip, session_id, command)
+
+# Get System information function
+# Might be redundent
+def get_system_info_execute(switch_ip: Annotated[str, "The IP address of the switch"],
+                    session_id: Annotated[str, "The session ID to use for authentication, obtained from login"]):
+    command = "show system"
     return execute_command(switch_ip, session_id, command)
