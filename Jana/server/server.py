@@ -4,6 +4,9 @@ import whisper
 import tempfile
 import os
 import requests
+from kokoro_onnx import Kokoro
+import soundfile as sf
+
 
 app = Flask(__name__)
 CORS(app)
@@ -14,7 +17,7 @@ model = whisper.load_model("base")
 
 # Load Kokoro TTS model
 print("Loading Kokoro TTS model...")
-kokoro = Kokoro("kokoro-v0_19.onnx", "voices.json")
+kokoro = Kokoro("kokoro-v1.0.onnx", "voices.bin")
 
 # Available voices in the Kokoro model
 available_voices = [
