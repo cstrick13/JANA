@@ -299,57 +299,65 @@ vec3 fade(vec3 t) {
     this.camera.updateProjectionMatrix();
   }
 
-  async playTts(textToSpeak: string) {
-    // If there's already a sound playing, stop it
-    if (this.currentSound) {
-      if (this.currentSound.isPlaying) {
+  async playTts(textToSpeak: string, speakerId: string = 'af_bella') {
+    // Ensure the speaker ID is valid
+    const validSpeakers = [
+        'af_bella', 'af_nicole', 'af_sarah',
+        'am_adam', 'am_michael',
+        'bf_emma', 'bf_isabella',
+        'bm_george', 'bm_lewis'
+    ];
+
+    if (!validSpeakers.includes(speakerId)) {
+        console.error(`Invalid speaker ID: ${speakerId}. Using default.`);
+        speakerId = 'af_bella';  // Default to a known good voice
+    }
+
+    // Stop any currently playing sound
+    if (this.currentSound && this.currentSound.isPlaying) {
         this.currentSound.stop();
-      }
-      this.currentSound = undefined;
+        this.currentSound = undefined;
     }
-  
+
     try {
-      // 1) Fetch TTS audio
-      const response = await fetch('http://localhost:5000/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToSpeak, speaker_id: 'p363' }) // or your speaker of choice
-      });
-  
-      if (!response.ok) {
-        console.error('TTS request failed:', response.statusText);
-        return;
-      }
-  
-      // 2) Convert response to a WAV blob
-      const audioBlob = await response.blob(); 
-      // The server should set Content-Type: audio/wav
-  
-      // 3) Create a Blob URL for Three.js to load
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
-      const sound = new THREE.Audio(listener);
-      const audioLoader = new THREE.AudioLoader();
-      this.currentSound = sound;
-      audioLoader.load(
-        audioUrl,
-        (buffer: AudioBuffer) => {
-            sound.setBuffer(buffer);
-            sound.setLoop(false);
-            sound.setVolume(0.5);
-            sound.play();
-            this.analyser = new THREE.AudioAnalyser(sound, 32);
-        },
-        undefined,
-        (err) => {
-          console.error('Audio loading error:', err);
+        // 1) Fetch TTS audio with the corrected speaker ID
+        const response = await fetch('http://localhost:5000/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToSpeak.trim(), speaker_id: speakerId }) 
+        });
+
+        if (!response.ok) {
+            console.error('TTS request failed:', response.statusText);
+            return;
         }
-      );
+
+        // 2) Convert response to a WAV blob
+        const audioBlob = await response.blob(); 
+        const audioUrl = URL.createObjectURL(audioBlob); // Convert Blob to URL
+
+        // 3) Load and play the audio in Three.js
+        const listener = this.camera.children.find(child => child.type === 'AudioListener') as THREE.AudioListener;
+        const sound = new THREE.Audio(listener);
+        const audioLoader = new THREE.AudioLoader();
+
+        this.currentSound = sound;
+        audioLoader.load(
+            audioUrl,
+            (buffer: AudioBuffer) => {
+                sound.setBuffer(buffer);
+                sound.setLoop(false);
+                sound.setVolume(0.5);
+                sound.play();
+                this.analyser = new THREE.AudioAnalyser(sound, 32);
+            },
+            undefined,
+            (err) => console.error('Audio loading error:', err)
+        );
     } catch (error) {
-      console.error('Error calling TTS or playing audio:', error);
+        console.error('Error calling TTS or playing audio:', error);
     }
-  }
+}
   
   private startAnimationLoop(): void {
     const animate = () => {
@@ -409,134 +417,128 @@ vec3 fade(vec3 t) {
   }
 
 
-  public stopRecording() {
+  public async stopRecording() {
     this.isRecording = false;
     this.uniforms['u_isRecording'].value = 0.0; 
     if (!this.mediaRecorder) {
-      console.warn('No recording in progress.');
-      return;
+        console.warn('No recording in progress.');
+        return;
     }
+
     this.mediaRecorder.stop();
     console.log('Recording stopped');
-  
-    // Once the recording stops, we handle the final Blob
+
     this.mediaRecorder.addEventListener('stop', async () => {
-      try {
-        // 1) Build our audio Blob for transcription
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        console.log('Recorded Blob size:', audioBlob.size);
-    
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.wav');
-    
-        // 2) Transcribe
-        const sttResponse = await fetch('http://localhost:5000/transcribe', {
-          method: 'POST',
-          body: formData
-        });
-        if (!sttResponse.ok) {
-          console.error('Transcribe request failed', sttResponse.statusText);
-          return;
-        }
-        const sttData = await sttResponse.json();
-        const transcription = sttData.transcription; 
-        console.log('Transcribed text:', transcription);
-    
-        // 3) Pass transcript to the Agent, requesting SSE
-        // Set the waiting flag to true
-        this.isWaitingForAgent = true;
-    
-        const agentResponse = await fetch('http://localhost:8000/run_task', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'  // crucial for SSE
-          },
-          body: JSON.stringify({ task: transcription })
-        });
-        if (!agentResponse.ok) {
-          console.error('Agent request failed', agentResponse.statusText);
-          this.isWaitingForAgent = false;
-          return;
-        }
-    
-        // 4) Read SSE stream and only keep the final message
-        const reader = agentResponse.body?.getReader();
-        if (!reader) {
-          console.error('No reader available for agentResponse');
-          this.isWaitingForAgent = false;
-          return;
-        }
-    
-        const decoder = new TextDecoder();
-        let finalReply = 'No response yet';
-    
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) {
-            // Stream ended
-            break;
-          }
-          const chunkText = decoder.decode(value, { stream: true });
-          console.log('SSE chunk:', chunkText);
-          // For example, chunk might have lines like:
-          // data: {"type":"text","message":"..."}
-          // data: {"type":"Result","message":"Final text"}
-          // data: {"status":"completed"}
-    
-          const lines = chunkText.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const jsonStr = line.slice('data: '.length).trim();
-              try {
-                const message = JSON.parse(jsonStr);
-    
-                // If we see {"type":"Result"}, that's presumably the final reply.
-                if (message.type === 'Result') {
-                  finalReply = message.message;
-                  console.log('Got final message from SSE:', finalReply);
-                }
-                // If we see {"status":"completed"}, we're done.
-                if (message.status === 'completed') {
-                  console.log('SSE stream completed');
-                  await reader.cancel();
-                  break;
-                }
-              } catch (err) {
-                console.error('Error parsing SSE chunk:', err);
-              }
+        try {
+            // 1) Convert recorded chunks into a Blob (WAV format)
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+            console.log('Recorded audio blob size:', audioBlob.size);
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+
+            // 2) Transcribe audio (Speech-to-Text)
+            console.log("Sending recorded audio to transcription...");
+            const sttResponse = await fetch('http://localhost:5000/transcribe', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!sttResponse.ok) {
+                console.error('Transcription failed:', sttResponse.statusText);
+                return;
             }
-          }
+
+            const sttData = await sttResponse.json();
+            let finalReply = sttData.transcription.trim();
+            console.log('Transcribed text:', finalReply);
+
+            // 3) Validate finalReply (Prevents Blob URL issues)
+            if (!finalReply || finalReply.startsWith("blob:")) {
+                console.error("TTS Error: finalReply is invalid. Got:", finalReply);
+                return;
+            }
+
+            // 4) Send the transcribed text to the AI agent
+            this.isWaitingForAgent = true;
+
+            const agentResponse = await fetch('http://localhost:8000/run_task', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream'
+                },
+                body: JSON.stringify({ task: finalReply })
+            });
+
+            if (!agentResponse.ok) {
+                console.error('Agent request failed:', agentResponse.statusText);
+                this.isWaitingForAgent = false;
+                return;
+            }
+
+            // 5) Read SSE response from the AI agent
+            const reader = agentResponse.body?.getReader();
+            if (!reader) {
+                console.error('Failed to get response reader.');
+                this.isWaitingForAgent = false;
+                return;
+            }
+
+            const decoder = new TextDecoder();
+            finalReply = ""; // Reset before processing
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunkText = decoder.decode(value, { stream: true });
+                console.log('Received SSE chunk:', chunkText);
+
+                const lines = chunkText.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const message = JSON.parse(line.slice(6).trim());
+
+                            if (message.type === 'Result') {
+                                finalReply = message.message.trim();
+                                console.log('Final AI response:', finalReply);
+                            }
+
+                            if (message.status === 'completed') {
+                                console.log('SSE processing completed.');
+                                await reader.cancel();
+                                break;
+                            }
+                        } catch (err) {
+                            console.error('Error parsing SSE data:', err);
+                        }
+                    }
+                }
+            }
+
+            this.isWaitingForAgent = false;
+
+            // 6) Validate finalReply (Prevent empty responses)
+            if (!finalReply) {
+                console.error("TTS Error: AI response is empty. Not sending to TTS.");
+                return;
+            }
+
+            // 7) Play the TTS audio (ONLY ONCE)
+            console.log("Final reply is valid. Sending to playTts():", finalReply);
+            this.playTts(finalReply, "af_bella");
+
+        } catch (error) {
+            console.error('Error in STT -> AI -> TTS flow:', error);
+            this.isWaitingForAgent = false;
         }
-    
-        // 5) finalReply is the agent's result
-        console.log('Final agent reply:', finalReply);
-    
-        // Reset waiting flag now that the agent response is complete
-        this.isWaitingForAgent = false;
-    
-        // 6) Send the final reply to TTS
-        const ttsResponse = await fetch('http://localhost:5000/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: finalReply })
-        });
-        if (!ttsResponse.ok) {
-          console.error('TTS request failed', ttsResponse.statusText);
-          return;
-        }
-    
-        // 7) Play the TTS audio of the final reply
-        this.playTts(finalReply);
-    
-      } catch (error) {
-        console.error('Error in STT -> Agent -> TTS flow:', error);
-        this.isWaitingForAgent = false;
-      }
     });
-    
+
     this.mediaRecorder = null;
-  }
-  
+}
+
+
 
 } // END of JanaComponent

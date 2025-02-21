@@ -4,6 +4,9 @@ import whisper
 import tempfile
 import os
 import requests
+from kokoro_onnx import Kokoro
+import soundfile as sf
+
 
 app = Flask(__name__)
 CORS(app)
@@ -11,6 +14,18 @@ CORS(app)
 # Load Whisper model
 print("Loading Whisper model...")
 model = whisper.load_model("base")
+
+# Load Kokoro TTS model
+print("Loading Kokoro TTS model...")
+kokoro = Kokoro("kokoro-v1.0.onnx", "voices.bin")
+
+# Available voices in the Kokoro model
+available_voices = [
+    'af_bella', 'af_nicole', 'af_sarah',
+    'am_adam', 'am_michael',
+    'bf_emma', 'bf_isabella',
+    'bm_george', 'bm_lewis'
+]
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
@@ -28,43 +43,41 @@ def transcribe():
 
 @app.route('/tts', methods=['POST'])
 def tts():
-    """
-    Receives text and an optional speaker_id, sends it to the Coqui TTS container, 
-    and returns audio data to the client.
-    """
     data = request.get_json()
+    print("Received /tts request:", data)  # Debugging log
+
     if not data or 'text' not in data:
+        print("Error: No text provided")
         return jsonify({'error': 'No text provided'}), 400
-    print("DEBUG /tts route got data:", data)
-
-
+    
     text_to_speak = data['text']
+    speaker_id = data.get('speaker_id', 'af_bella')  # Default speaker
 
-    # If the client doesn't provide a speaker_id, default to "p225"
-    speaker_id = data.get('speaker_id', 'p363')  
+    if speaker_id not in available_voices:
+        print(f"Error: Invalid speaker_id: {speaker_id}")
+        return jsonify({'error': f'Invalid speaker_id. Available voices: {available_voices}'}), 400
 
-    # Adjust the URL if your TTS container runs elsewhere
-    coqui_url = 'http://localhost:5002/api/tts'
+    print(f"Generating TTS for: {text_to_speak} | Voice: {speaker_id}")
 
-    # Pass text (and speaker_id) as JSON
-    print("Sending text to TTS:", text_to_speak)
-    print("Using speaker_id:", speaker_id)
+    try:
+        samples, sample_rate = kokoro.create(text_to_speak, voice=speaker_id, speed=1.0)
 
-    # If your model also needs language_id or other fields, add them similarly:
-    #   language_id = data.get('language_id', 'en')
-    #   payload = {'text': text_to_speak, 'speaker_id': speaker_id, 'language_id': language_id}
-    #   response = requests.post(coqui_url, json=payload)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
+            sf.write(tmp_wav.name, samples, sample_rate)
+            audio_path = tmp_wav.name
 
-    payload = {"text": text_to_speak, "speaker_id": "p363"}
-    response = requests.post(coqui_url, data=payload)
+        with open(audio_path, 'rb') as f:
+            audio_data = f.read()
 
-    if response.status_code != 200:
-        return jsonify({'error': 'TTS request failed'}), 500
+        os.unlink(audio_path)
+        return Response(audio_data, mimetype='audio/wav')
 
-    # Return raw audio data as WAV
-    audio_data = response.content
-    return Response(audio_data, mimetype='audio/wav')
+    except Exception as e:
+        print("Error in TTS generation:", str(e))
+        return jsonify({'error': str(e)}), 500
 
+# This is a test push to see if I nuked the repo after supposedly fixing the issue
+# It did not even give me the prompt it just went ahead and did it
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
