@@ -82,7 +82,6 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
         },
         body: JSON.stringify({ task: text })
       });
@@ -105,25 +104,27 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         const chunkText = decoder.decode(value, { stream: true });
         console.log('SSE chunk from agent:', chunkText);
         const lines = chunkText.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice('data: '.length).trim();
-            try {
-              const message = JSON.parse(jsonStr);
-              if (message.type === 'Result') {
-                finalReply = message.message;
-              }
-              if (message.status === 'completed') {
-                console.log('SSE stream completed');
-                await reader.cancel();
-                break;
-              }
-            } catch (err) {
-              console.error('Error parsing SSE chunk:', err);
-            }
-          }
-        }
+        finalReply = chunkText
+        // for (const line of lines) {
+        //   if (line.startsWith('data: ')) {
+        //     const jsonStr = line.slice('data: '.length).trim();
+        //     try {
+        //       const message = JSON.parse(jsonStr);
+        //       if (message.type === 'Result') {
+        //         finalReply = message.message;
+        //       }
+        //       if (message.status === 'completed') {
+        //         console.log('SSE stream completed');
+        //         await reader.cancel();
+        //         break;
+        //       }
+        //     } catch (err) {
+        //       console.error('Error parsing SSE chunk:', err);
+        //     }
+        //   }
+        // }
       }
+      
       console.log('Final agent reply:', finalReply);
       this.chatMessages.push(`Jana: ${finalReply}`);
     } catch (error) {
