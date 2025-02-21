@@ -75,7 +75,8 @@ def tts():
 
     return Response(audio_data, mimetype='audio/wav')
 
-
+# This is a test push to see if I nuked the repo after supposedly fixing the issue
+# It did not even give me the prompt it just went ahead and did it
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
