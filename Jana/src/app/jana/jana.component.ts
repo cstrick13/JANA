@@ -255,7 +255,7 @@ vec3 fade(vec3 t) {
 
     try {
         // 1) Fetch TTS audio with the corrected speaker ID
-        const response = await fetch('http://localhost:5000/tts', {
+        const response = await fetch('http://localhost:5050/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: textToSpeak.trim(), speaker_id: speakerId }) 
@@ -353,7 +353,7 @@ vec3 fade(vec3 t) {
 
   public async stopRecording() {
     this.isRecording = false;
-    this.uniforms['u_isRecording'].value = 0.0; 
+    this.uniforms['u_isRecording'].value = 0.0;
     if (!this.mediaRecorder) {
         console.warn('No recording in progress.');
         return;
@@ -373,7 +373,7 @@ vec3 fade(vec3 t) {
 
             // 2) Transcribe audio (Speech-to-Text)
             console.log("Sending recorded audio to transcription...");
-            const sttResponse = await fetch('http://localhost:5000/transcribe', {
+            const sttResponse = await fetch('http://localhost:5050/transcribe', {
                 method: 'POST',
                 body: formData
             });
@@ -384,16 +384,10 @@ vec3 fade(vec3 t) {
             }
 
             const sttData = await sttResponse.json();
-            let finalReply = sttData.transcription.trim();
-            console.log('Transcribed text:', finalReply);
+            const transcription = sttData.transcription;
+            console.log('Transcribed text:', transcription);
 
-            // 3) Validate finalReply (Prevents Blob URL issues)
-            if (!finalReply || finalReply.startsWith("blob:")) {
-                console.error("TTS Error: finalReply is invalid. Got:", finalReply);
-                return;
-            }
-
-            // 4) Send the transcribed text to the AI agent
+            // 3) Send the transcribed text to the AI agent
             this.isWaitingForAgent = true;
 
             const agentResponse = await fetch('http://localhost:8000/run_task', {
@@ -402,7 +396,7 @@ vec3 fade(vec3 t) {
                     'Content-Type': 'application/json',
                     'Accept': 'text/event-stream'
                 },
-                body: JSON.stringify({ task: finalReply })
+                body: JSON.stringify({ task: transcription })
             });
 
             if (!agentResponse.ok) {
@@ -411,7 +405,7 @@ vec3 fade(vec3 t) {
                 return;
             }
 
-            // 5) Read SSE response from the AI agent
+            // 4) Read SSE response from the AI agent
             const reader = agentResponse.body?.getReader();
             if (!reader) {
                 console.error('Failed to get response reader.');
@@ -420,7 +414,7 @@ vec3 fade(vec3 t) {
             }
 
             const decoder = new TextDecoder();
-            finalReply = ""; // Reset before processing
+            let finalReply = 'No response yet';
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -436,7 +430,7 @@ vec3 fade(vec3 t) {
                             const message = JSON.parse(line.slice(6).trim());
 
                             if (message.type === 'Result') {
-                                finalReply = message.message.trim();
+                                finalReply = message.message;
                                 console.log('Final AI response:', finalReply);
                             }
 
@@ -454,15 +448,48 @@ vec3 fade(vec3 t) {
 
             this.isWaitingForAgent = false;
 
-            // 6) Validate finalReply (Prevent empty responses)
-            if (!finalReply) {
-                console.error("TTS Error: AI response is empty. Not sending to TTS.");
+            // 5) Validate and Clean finalReply before sending to TTS
+            finalReply = finalReply.trim();
+            if (!finalReply || finalReply.startsWith("blob:")) {
+                console.error("TTS Error: finalReply is invalid. Got:", finalReply);
                 return;
             }
 
-            // 7) Play the TTS audio (ONLY ONCE)
-            console.log("Final reply is valid. Sending to playTts():", finalReply);
-            this.playTts(finalReply, "af_bella");
+            // 6) Ensure speaker_id is valid
+            const validVoices = [
+                'af_bella', 'af_nicole', 'af_sarah',
+                'am_adam', 'am_michael',
+                'bf_emma', 'bf_isabella',
+                'bm_george', 'bm_lewis'
+            ];
+
+            const selectedVoice = "af_bella"; // Change this if you want another voice
+            if (!validVoices.includes(selectedVoice)) {
+                console.error("Invalid speaker_id:", selectedVoice);
+                return;
+            }
+
+            // 7) Send the response to Kokoro TTS
+            console.log("Sending text to Kokoro TTS...");
+            const ttsResponse = await fetch('http://localhost:5050/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: finalReply,
+                    speaker_id: selectedVoice
+                })
+            });
+
+            if (!ttsResponse.ok) {
+                console.error('TTS request failed:', ttsResponse.statusText);
+                return;
+            }
+
+            // 8) Convert Blob to a URL and play the generated TTS audio
+            console.log("Playing generated TTS response...");
+            const audioBlobTTS = await ttsResponse.blob();
+            const audioURL = URL.createObjectURL(audioBlobTTS);
+            this.playTts(audioURL);
 
         } catch (error) {
             console.error('Error in STT -> AI -> TTS flow:', error);
