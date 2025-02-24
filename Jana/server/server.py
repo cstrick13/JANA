@@ -43,41 +43,40 @@ def transcribe():
 
 @app.route('/tts', methods=['POST'])
 def tts():
+    """
+    Receives text and an optional speaker_id, uses Kokoro TTS to generate audio, 
+    and returns audio data to the client.
+    """
     data = request.get_json()
-    print("Received /tts request:", data)  # Debugging log
-
     if not data or 'text' not in data:
-        print("Error: No text provided")
         return jsonify({'error': 'No text provided'}), 400
     
     text_to_speak = data['text']
-    speaker_id = data.get('speaker_id', 'af_bella')  # Default speaker
 
+    # Default to 'af_bella' if no valid speaker_id is provided
+    speaker_id = data.get('speaker_id', 'af_bella')
     if speaker_id not in available_voices:
-        print(f"Error: Invalid speaker_id: {speaker_id}")
         return jsonify({'error': f'Invalid speaker_id. Available voices: {available_voices}'}), 400
+    
+    print("Generating audio with Kokoro TTS...")
+    samples, sample_rate = kokoro.create(text_to_speak, voice=speaker_id, speed=1.0)
 
-    print(f"Generating TTS for: {text_to_speak} | Voice: {speaker_id}")
+    # Save the generated audio to a temporary WAV file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
+        sf.write(tmp_wav.name, samples, sample_rate)
+        audio_path = tmp_wav.name
 
-    try:
-        samples, sample_rate = kokoro.create(text_to_speak, voice=speaker_id, speed=1.0)
+    # Return raw audio data as WAV
+    with open(audio_path, 'rb') as f:
+        audio_data = f.read()
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
-            sf.write(tmp_wav.name, samples, sample_rate)
-            audio_path = tmp_wav.name
+    # Clean up the temporary file
+    os.unlink(audio_path)
 
-        with open(audio_path, 'rb') as f:
-            audio_data = f.read()
-
-        os.unlink(audio_path)
-        return Response(audio_data, mimetype='audio/wav')
-
-    except Exception as e:
-        print("Error in TTS generation:", str(e))
-        return jsonify({'error': str(e)}), 500
+    return Response(audio_data, mimetype='audio/wav')
 
 # This is a test push to see if I nuked the repo after supposedly fixing the issue
 # It did not even give me the prompt it just went ahead and did it
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=True)
