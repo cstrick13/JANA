@@ -1,21 +1,16 @@
 import json
 import os
 import ipaddress
-import RESTapi
+import RESTapi_S as RESTapi
 
 # Debug mode
 DEBUG = False
 
 # Default switch information
 # Aruba (AOS-S)
-AOS_SWITCH_IP = "10.0.150.100"
-AOS_USERNAME = "admin"
-AOS_PASSWORD = "admin"
-
-# Aruba 6300 (AOS-CX)
-CX_SWITCH_IP = "10.0.150.150"
-CX_USERNAME = "admin"
-CX_PASSWORD = ""
+S_SWITCH_IP = "10.0.150.100"
+S_USERNAME = "admin"
+S_PASSWORD = "admin"
 
 # Constants
 SESSION_FILE = "session.json" # File to store session information
@@ -69,15 +64,10 @@ if __name__ == "__main__":
     if vpn_cred.lower() != "n":
         vpn_switch = input("Aruba (AOS-S) / Aruba 6300 (AOS-CX), are you connecting to AOS-S or AOS-CX? (S/C): ")
         if vpn_switch.lower() == "s":
-            switch_ip = AOS_SWITCH_IP
-            username = AOS_USERNAME
-            password = AOS_PASSWORD
-        else:
-            switch_ip = CX_SWITCH_IP
-            username = CX_USERNAME
-            password = CX_PASSWORD
+            switch_ip = S_SWITCH_IP
+            username = S_USERNAME
+            password = S_PASSWORD
     else:
-        # If user is not connected to the VPN, ask if they want to use the default switch IP
         print("Sorry, you are not connected to the VPN. Manual input of IP addresses is also not supported. Please connect to the VPN to access the switch.")
         exit(1)
     
