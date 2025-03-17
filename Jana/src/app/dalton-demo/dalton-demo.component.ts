@@ -7,15 +7,10 @@ import { WizardConfigService } from '../wizard-config.service';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
-	selector: 'app-dalton-demo',
-	standalone: true,
-	imports: [CommonModule, FormsModule, 
-// TODO: `HttpClientModule` should not be imported into a component directly.
-// Please refactor the code to add `provideHttpClient()` call to the provider list in the
-// application bootstrap logic and remove the `HttpClientModule` import from this component.
-HttpClientModule, RouterOutlet, RouterModule],
-	templateUrl: './dalton-demo.component.html',
-	styleUrls: ['./dalton-demo.component.css']
+    selector: 'app-dalton-demo',
+    templateUrl: './dalton-demo.component.html',
+    styleUrls: ['./dalton-demo.component.css'],
+	standalone: false
 })
 export class DaltonDemoComponent {
 	file: File | null = null;

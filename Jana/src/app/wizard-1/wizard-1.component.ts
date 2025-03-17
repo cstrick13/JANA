@@ -5,9 +5,10 @@ import { Router, RouterModule, RouterOutlet } from '@angular/router';
 import { WizardConfigService } from '../wizard-config.service';
 
 @Component({
-  selector: 'app-wizard-1',
-  templateUrl: './wizard-1.component.html',
-  styleUrl: './wizard-1.component.css'
+    selector: 'app-wizard-1',
+    templateUrl: './wizard-1.component.html',
+    styleUrl: './wizard-1.component.css',
+    standalone: false
 })
 export class Wizard1Component {
   outputPath = '';

@@ -20,6 +20,14 @@ import { MatListModule } from '@angular/material/list';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
+import { Wizard1Component } from './wizard-1/wizard-1.component';
+import { Wizard2Component } from './wizard-2/wizard-2.component';
+import { Wizard3Component } from './wizard-3/wizard-3.component';
+import { JanaComponent } from './jana/jana.component';
+import { LoginComponent } from './login/login.component';
+import { HeaderComponent } from './header/header.component';
+import { SidenavComponent } from './sidenav/sidenav.component';
+import { DaltonDemoComponent } from './dalton-demo/dalton-demo.component';
 
 
 import { getAuth } from 'firebase/auth';
@@ -30,6 +38,14 @@ import { environment } from '../environments/environment';
 @NgModule({
   declarations: [
     AppComponent,
+    Wizard1Component,
+    Wizard2Component,
+    Wizard3Component,
+    JanaComponent,
+    LoginComponent,
+    HeaderComponent,
+    SidenavComponent,
+    DaltonDemoComponent
   ],
   imports: [
     BrowserModule,

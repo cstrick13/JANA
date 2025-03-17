@@ -8,9 +8,10 @@ import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-jana',
-  templateUrl: './jana.component.html',
-  styleUrl: './jana.component.css'
+    selector: 'app-jana',
+    templateUrl: './jana.component.html',
+    styleUrl: './jana.component.css',
+    standalone: false
 })
 export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;

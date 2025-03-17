@@ -5,9 +5,10 @@ import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-wizard-3',
-  templateUrl: './wizard-3.component.html',
-  styleUrl: './wizard-3.component.css'
+    selector: 'app-wizard-3',
+    templateUrl: './wizard-3.component.html',
+    styleUrl: './wizard-3.component.css',
+    standalone: false
 })
 export class Wizard3Component {
   userName: string = '';

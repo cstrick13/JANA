@@ -7,9 +7,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 
 @Component({
-  selector: 'app-wizard-2',
-  templateUrl: './wizard-2.component.html',
-  styleUrl: './wizard-2.component.css'
+    selector: 'app-wizard-2',
+    templateUrl: './wizard-2.component.html',
+    styleUrl: './wizard-2.component.css',
+    standalone: false
 })
 export class Wizard2Component implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
