@@ -1,1 +1,51 @@
-<p>login works!</p>
+<div class="wrapper">
+    <div class="inner">
+    <form action="">
+      <img class="logo" src="/assets/images/BeeTrp.png" alt="Logo" class="logo">
+      <h3>{{getStateText()}}</h3>
+      <div *ngIf="isLoginState()">
+        <div class="form-holder">
+          <span class="fas fa-user"></span>
+          <input type="text" class="form-control" name="userName" [(ngModel)]="loginObj.userName" placeholder="Username" id="username">
+          </div>
+          <div class="form-holder">
+            <span class="fas fa-lock"></span> <!-- Font Awesome lock icon -->
+            <input type="password" class="form-control" name="password" [(ngModel)]="loginObj.password" placeholder="Password" id="password">
+        </div>
+        <button (click)="onLogin()" class="auth-button">Login</button>
+      </div>
+      <div *ngIf="isRegisterState()">
+        <div class="form-holder">
+          <span class="fas fa-user"></span> 
+          <input class="form-control" type="text" #registerUsername placeholder="Username">
+        </div>
+        <div class="form-holder">
+          <span class="fas fa-envelope"></span>
+          <input class="form-control" type="text" #registerEmail placeholder="Email">
+        </div>
+        <div class="form-holder">
+          <span class="fas fa-lock"></span> 
+          <input class="form-control" type="password" #registerPassword placeholder="Password">
+        </div>
+        <div class="form-holder">
+          <span class="fas fa-lock"></span> 
+          <input class="form-control" type="password" #registerConfirmPassword placeholder="Confirm Password">
+        </div>
+        <button (click)="registerUser(registerUsername, registerEmail, registerPassword, registerConfirmPassword)" class="auth-button">Register</button>
+      </div>
+      
+    <!-- <div *ngIf="isForgotPasword()">
+      <div class="form-holder">
+          <span class="fas fa-envelope"></span> 
+          <input class="form-control" #resetemail placeholder="Email" type="text">
+      </div>
+      <button (click)="ForgotPassword(resetemail)" class="auth-button">Reset</button>
+  </div> -->
+    <div class="auth-actions">
+      <a (click)="onChangeLogin()" class="auth-link">Login</a>
+      <a (click)="onRegister()" class="auth-link">Register</a>
+      <!-- <a (click)="onForgotPassword()" class="auth-link">Forgot Password?</a> -->
+  </div>
+      </form>
+    </div>
+  </div>

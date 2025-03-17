@@ -1,15 +1,21 @@
-<ng-container *ngIf="!isLoggedIn; else appContent">
-  <app-login></app-login>
+<ng-container *ngIf="isLoading; else loadedContent">
+  <div class="splash-screen">
+    Loading...
+  </div>
 </ng-container>
 
-<ng-template #appContent>
-  <div class="app-container">
-    <app-sidenav (onToggleSideNav)="onToggleSideNav($event)"></app-sidenav>
-    <div class="main-content" [ngClass]="{'collapsed': isSideNavCollapsed}">
-      <ng-container>
+<ng-template #loadedContent>
+  <ng-container *ngIf="isLoggedIn; else loginScreen">
+    <div class="app-container">
+      <app-sidenav (onToggleSideNav)="onToggleSideNav($event)"></app-sidenav>
+      <div class="main-content" [ngClass]="{'collapsed': isSideNavCollapsed}">
         <app-header [isSidebarCollapsed]="isSideNavCollapsed"></app-header>
-      </ng-container>
-      <app-body [collapsed]="isSideNavCollapsed" [screenWidth]="screenWidth"></app-body>
+        <app-body [collapsed]="isSideNavCollapsed" [screenWidth]="screenWidth"></app-body>
+      </div>
     </div>
-  </div>
+  </ng-container>
+
+  <ng-template #loginScreen>
+    <app-login></app-login>
+  </ng-template>
 </ng-template>

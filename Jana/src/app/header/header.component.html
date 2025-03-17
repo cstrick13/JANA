@@ -1,1 +1,131 @@
-<p>header works!</p>
+
+<mat-toolbar class="header-toolbar" [ngClass]="getHeaderClass()">
+    <div class="Login-Text">
+      <!-- Conditionally display user role or welcome message -->
+      <span *ngIf="isLoggedIn; else notLoggedIn">
+        Welcome, {{ userName }}
+      </span>
+      <ng-template #notLoggedIn>
+        WASP
+      </ng-template>
+    </div>
+    <div class="toolbar-content">
+      <ul class="toolbar-items">
+        <li>
+          <button [matBadge]="UnreadNotifications.length" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop" mat-icon-button>
+            <mat-icon>notificationssharp</mat-icon>
+          </button>
+        </li>
+  
+        <!-- Notifications for Admins -->
+        <li>
+          <button [matBadge]="UnreadAdminNotifications.length" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminModal" mat-icon-button>
+            <mat-icon>notificationssharp</mat-icon>
+          </button>
+        </li>
+        <li *ngIf="isAdmin()">
+                  <button [matBadge]="requests.length" mat-icon-button>
+                    <mat-icon>inboxsharp</mat-icon>
+                  </button>
+                </li>
+        <li>
+          <button mat-button [matMenuTriggerFor]="menu">
+            <mat-icon>account_circle</mat-icon>
+            <mat-icon>keyboard_arrow_down</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button *ngIf="isLoggedIn; else showLogin" (click)="onLogout()" mat-menu-item>
+              <mat-icon>exit_to_app</mat-icon>
+              Logout
+            </button>
+            <ng-template #showLogin>
+              <button [routerLink]="'/login'" mat-menu-item>
+                <mat-icon>exit_to_app</mat-icon>
+                Login
+              </button>
+            </ng-template>
+          </mat-menu>
+        </li>
+      </ul>
+    </div>
+  </mat-toolbar>
+  
+  <div class="modal fade" id="staticBackdrop" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog custom-modal-dialog">
+      <div class="modal-content custom-modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="staticBackdropLabel">Notification</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <mat-tab-group>
+            <mat-tab label="New Notifications">
+              <div *ngIf="UnreadNotifications.length > 0" class="scrollable-list">
+                <ul class="list-group">
+                  <li *ngFor="let notification of UnreadNotifications" class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ notification.message }}
+                    <i class="fa fa-check"></i>
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="UnreadNotifications.length === 0">
+                No new notifications.
+              </div>
+            </mat-tab>
+            <mat-tab label="Dismissed">
+              <div *ngIf="ReadNotifications.length > 0" class="scrollable-list">
+                <ul class="list-group">
+                  <li *ngFor="let notification of ReadNotifications" class="list-group-item">
+                    {{ notification.message }}
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="ReadNotifications.length === 0">
+                No dismissed notifications.
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </div>
+      </div>
+  </div>
+  </div>
+  
+  <div class="modal fade" id="adminModal" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog custom-modal-dialog">
+      <div class="modal-content custom-modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="staticBackdropLabel">Notification</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <mat-tab-group>
+            <mat-tab label="New Notifications">
+              <div *ngIf="UnreadAdminNotifications.length > 0" class="scrollable-list">
+                <ul class="list-group">
+                  <li *ngFor="let notification of UnreadAdminNotifications" class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ notification.message }}
+                    <i class="fa fa-check"></i>
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="UnreadAdminNotifications.length === 0">
+                No new notifications.
+              </div>
+            </mat-tab>
+            <mat-tab label="Dismissed">
+              <div *ngIf="ReadAdminNotifications.length > 0" class="scrollable-list">
+                <ul class="list-group">
+                  <li *ngFor="let notification of ReadAdminNotifications" class="list-group-item">
+                    {{ notification.message }}
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="ReadAdminNotifications.length === 0">
+                No dismissed notifications.
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </div>
+      </div>
+    </div>
+  </div>

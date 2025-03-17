@@ -1,11 +1,12 @@
 export const environment = {
     production:false,
     firebaseConfig:{
-        apiKey: "AIzaSyAtiigVisct4ltUGvQuusFvnhrvRlNAqms",
-        authDomain: "wasp-ae10a.firebaseapp.com",
-        projectId: "wasp-ae10a",
-        storageBucket: "wasp-ae10a.appspot.com",
-        messagingSenderId: "854536822222",
-        appId: "1:854536822222:web:ddef4088a9300d06eedf9f"
+      apiKey: "AIzaSyAedeWMJ6M-dDn_sTV4-rM_Aoimzv8tUiQ",
+      authDomain: "cloudywithchance.firebaseapp.com",
+      projectId: "cloudywithchance",
+      storageBucket: "cloudywithchance.firebasestorage.app",
+      messagingSenderId: "723769705470",
+      appId: "1:723769705470:web:d10a7d3d19fb58384036af",
+      measurementId: "G-NJ98037BV4"
       }
 };

@@ -23,7 +23,8 @@ interface SideNavToggle{
 export class AppComponent implements OnInit  {
   title = 'Interface';
   role: string = '';
-  isLoggedIn = false;
+  isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  isLoading = true;
 
 
   constructor(
@@ -32,10 +33,22 @@ export class AppComponent implements OnInit  {
     private authService: AuthService 
   ) {}
 
-  ngOnInit() {
-    this.authService.currentUser$.subscribe((user) => {
+  ngOnInit(): void {
+    const startTime = Date.now();
+    const minimumLoadingTime = 1000; // minimum time in milliseconds (1 second)
+    this.authService.currentUser$.subscribe(user => {
+      // Update local flag based on actual Firebase state
       this.isLoggedIn = !!user;
-      console.log('AuthService emitted loggedIn state:', this.isLoggedIn);
+      if (!this.isLoggedIn) {
+        localStorage.removeItem('isLoggedIn');
+      }
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minimumLoadingTime - elapsed);
+
+      // Delay hiding the loading screen by the remaining time
+      setTimeout(() => {
+        this.isLoading = false;
+      }, remaining);
     });
   }
 

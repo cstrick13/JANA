@@ -1,0 +1,214 @@
+:host {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  
+    /* Background image (already present) */
+    background-image: url('/assets/background2.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  
+  p, h1, h2, h3, h4, h5, h6, ul {
+    margin: 0;
+  }
+  
+  .logo {
+    display: block;
+    margin: -70px auto 10px;
+    width: 175px;
+    height: auto;
+  }
+  
+  ul {
+    padding-left: 0;
+    margin-bottom: 0;
+  }
+  
+  a {
+    text-decoration: none;
+  }
+  
+  :focus {
+    outline: none;
+  }
+  
+  .loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  
+  /* GLASSMORPHISM STYLES FOR THE LOGIN BOX */
+  form {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 77px 61px 66px;
+  
+    /* Semi-transparent background to let the backdrop show through */
+    background: rgba(216, 156, 94, 0.2); /* Adjust alpha for more/less transparency */
+  
+    /* Glassmorphism "frosted" effect */
+    backdrop-filter: blur(10px);         /* Modern browsers */
+    -webkit-backdrop-filter: blur(10px); /* Safari support */
+  
+    /* Optional subtle border to enhance glass look */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+    -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+    -ms-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+    -o-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+  }
+  
+  h3 {
+    text-transform: uppercase;
+    font-size: 25px;
+    color: #ffffff;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 33px;
+  }
+  
+  .form-holder {
+    position: relative;
+    margin-bottom: 21px;
+    span {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: #f7f7f7;
+      &.lnr-lock {
+        left: 2px;
+      }
+    }
+  }
+  
+  .form-control {
+    border: none;
+    border-bottom: 1px solid #e6e6e6;
+    display: block;
+    width: 100%;
+    height: 38px;
+    background: none;
+    padding: 3px 42px 0px;
+    color: #fff;
+    font-size: 16px;
+    transition: border-bottom 0.3s ease;
+  
+    &::placeholder {
+      color: #ffffff;
+      font-size: 14px;
+    }
+  
+    &:focus {
+      border-bottom: 1px solid #accffe;
+    }
+  }
+  
+  /* Button with a gradient and slight hover/click animations */
+  button {
+    border: none;
+    width: 100%;
+    height: 49px;
+    margin-top: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: linear-gradient(135deg, #071b52, #0a1e49);
+    color: #fff;
+    border-radius: 25px;
+    text-transform: uppercase;
+    font-size: 15px;
+    letter-spacing: 2px;
+    transition: all 0.5s;
+    position: relative;
+    overflow: hidden;
+  
+    span {
+      position: relative;
+      z-index: 2;
+    }
+  
+    &:before, 
+    &:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background-color: rgba(253, 166, 52, 0.25);
+      transform: translate(-100%, 0);
+      transition: all 0.3s cubic-bezier(0.75, 0, 0.125, 1);
+    }
+    &:after {
+      transition-delay: 0.2s;
+    }
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  .auth-actions {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .auth-link {
+    cursor: pointer;
+    display: block;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 16px;
+    margin: 5px 0;
+    transition: color 0.3s ease;
+  }
+  
+  .auth-link:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 991px) {
+    .inner {
+      width: 400px;
+      left: 4%;
+    }
+  }
+  
+  @media (max-width: 767px) {
+    .inner {
+      width: 100%;
+      left: 0;
+    }
+    .logo {
+      margin: -20px auto 10px;
+    }
+    form {
+      height: auto;
+      padding: 35px;
+    }
+    .wrapper {
+      background: none;
+    }
+  }
+  

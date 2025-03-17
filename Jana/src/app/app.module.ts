@@ -28,6 +28,7 @@ import { LoginComponent } from './login/login.component';
 import { HeaderComponent } from './header/header.component';
 import { SidenavComponent } from './sidenav/sidenav.component';
 import { DaltonDemoComponent } from './dalton-demo/dalton-demo.component';
+import { BodyComponent } from './body/body.component';
 
 
 import { getAuth } from 'firebase/auth';
@@ -45,7 +46,8 @@ import { environment } from '../environments/environment';
     LoginComponent,
     HeaderComponent,
     SidenavComponent,
-    DaltonDemoComponent
+    DaltonDemoComponent,
+    BodyComponent
   ],
   imports: [
     BrowserModule,

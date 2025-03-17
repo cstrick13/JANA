@@ -5,6 +5,7 @@ import { HomeComponent } from "./home/home.component";
 import { Wizard3Component } from "./wizard-3/wizard-3.component";
 import { DaltonDemoComponent } from "./dalton-demo/dalton-demo.component";
 import { JanaComponent } from "./jana/jana.component";
+import { AuthGuard } from "./auth.guard";
 
 
 
@@ -13,6 +14,7 @@ const routeConfig: Routes = [
         path: "",
         component: HomeComponent,
         title: "Home",
+        canActivate: [AuthGuard]
     },
     {
         path:"jana",

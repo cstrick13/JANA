@@ -1,0 +1,100 @@
+.modal-dialog-request {
+    max-width: 700px; /* Adjust width as needed */
+  }
+  
+  .modal-content-request {
+    height: 250px; /* Adjust height as needed */
+  }
+  .scrollable-list {
+    max-height: 80px; /* Adjust the height as needed */
+    overflow-y: auto; /* Enables vertical scrolling */
+  }
+  
+  
+  
+  
+  .header-toolbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 64px; /* Adjust based on your header height */
+    background: #000000; /* Adjust based on your header color */
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem; /* Adjust based on your padding preference */
+    transition: all .5s ease;
+    z-index: 30; /* Ensure it is above other elements */
+    justify-content: space-between;
+    
+  }
+  .mark-read {
+    color: #007bff; /* Adjust color as needed */
+    cursor: pointer;
+    font-size: 1.25rem; /* Adjust size as needed */
+    margin: 0; /* Remove default margin */
+  }
+  
+  .mark-read:hover {
+    text-decoration: underline;
+  }
+  .Login-Text{
+      font-size: 24px;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+  }
+  .header-toolbar .mat-icon {
+      color: #ffffff; /* Ensure the color is white */
+      font-size: 26px; /* Adjust size as needed */
+      
+    }
+  .header-collapsed {
+    left: 16.5rem; /* Adjust based on collapsed sidebar width */
+    width: calc(100% - 16.5rem);
+  }
+  
+  .header-expanded {
+    left: 8rem; /* Adjust based on expanded sidebar width */
+    width: calc(100% - 8rem);
+  }
+  button {
+      outline: none;
+      border: 0;
+      background: transparent;
+    }
+  
+  .row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .toolbar-items {
+      list-style: none;
+      display: flex;
+      padding: 0;
+      margin: 0;
+      align-items: center;
+    }
+    
+    .toolbar-items li {
+      margin-right: 20px; /* Adjust space between items */
+    }
+    
+    .user-image {
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      align-items: center;
+    }
+  
+    ::ng-deep {
+      .mat-menu-content {
+        width: 160px;
+      }
+    }
+    
+    
+    
+  
+  

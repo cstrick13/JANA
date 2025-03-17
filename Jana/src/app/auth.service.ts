@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -10,12 +10,17 @@ export class AuthService {
   private currentUserSubject: BehaviorSubject<User | null> = new BehaviorSubject<User | null>(null);
   public currentUser$: Observable<User | null> = this.currentUserSubject.asObservable();
 
+  // BehaviorSubject for the current role, initialized from localStorage (or 'operator' by default)
+  private currentRoleSubject: BehaviorSubject<string> = new BehaviorSubject<string>(this.getRole());
+  public currentRole$: Observable<string> = this.currentRoleSubject.asObservable();
+
   constructor() {
     const auth = getAuth();
-    // Listen for changes to the authentication state.
+    // Listen for authentication state changes
     onAuthStateChanged(auth, (user) => {
       this.currentUserSubject.next(user);
       console.log('Firebase auth state changed:', user);
+      // Optionally, you could update the role here if it depends on user info
     });
   }
 
@@ -29,10 +34,23 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  // Example: Determine the user's role based on email
+  // Returns the current role stored in localStorage (or defaults to 'operator')
   getRole(): string {
     return localStorage.getItem('role') || 'operator';
   }
+
+  // Helper method to update the role both in localStorage and in the BehaviorSubject
+  updateRole(role: string): void {
+    localStorage.setItem('role', role);
+    this.currentRoleSubject.next(role);
+  }
+
+  // Log out the user and reset the role if needed
+  logout(): Promise<void> {
+    const auth = getAuth();
+    // Optionally reset the role on logout
+    this.updateRole('operator');
+    localStorage.removeItem('isLoggedIn');
+    return signOut(auth);
+  }
 }
-
-
