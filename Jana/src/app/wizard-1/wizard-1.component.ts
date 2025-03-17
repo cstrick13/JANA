@@ -6,8 +6,6 @@ import { WizardConfigService } from '../wizard-config.service';
 
 @Component({
   selector: 'app-wizard-1',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet,RouterModule,FormsModule ],
   templateUrl: './wizard-1.component.html',
   styleUrl: './wizard-1.component.css'
 })

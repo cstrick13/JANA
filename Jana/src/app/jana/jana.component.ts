@@ -9,8 +9,6 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-jana',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterModule,FormsModule],
   templateUrl: './jana.component.html',
   styleUrl: './jana.component.css'
 })

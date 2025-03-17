@@ -6,8 +6,6 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-wizard-3',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet,RouterModule,FormsModule ],
   templateUrl: './wizard-3.component.html',
   styleUrl: './wizard-3.component.css'
 })

@@ -1,25 +1,15 @@
-<!-- Show home screen if at '/' -->
-<app-home
-  *ngIf="router.url === '/' && !wizardConfigService.wizardFinished">
-</app-home>
+<ng-container *ngIf="!isLoggedIn; else appContent">
+  <app-login></app-login>
+</ng-container>
 
-<!-- Show wizard only if it's not finished -->
-<div class="wizard-container" *ngIf="!wizardConfigService.wizardFinished && router.url !== '/'">
-  <nav class="wizard-steps">
-    <div class="circle" [class.active]="router.url === '/step1'">1</div>
-    <div class="line"></div>
-    <div class="circle" [class.active]="router.url === '/step2'">2</div>
-    <div class="line"></div>
-    <div class="circle" [class.active]="router.url === '/step3'">3</div>
-    <div class="line"></div>
-    <div class="circle" [class.active]="router.url === '/recording'">
-      <i class="fas fa-check"></i>
+<ng-template #appContent>
+  <div class="app-container">
+    <app-sidenav (onToggleSideNav)="onToggleSideNav($event)"></app-sidenav>
+    <div class="main-content" [ngClass]="{'collapsed': isSideNavCollapsed}">
+      <ng-container>
+        <app-header [isSidebarCollapsed]="isSideNavCollapsed"></app-header>
+      </ng-container>
+      <app-body [collapsed]="isSideNavCollapsed" [screenWidth]="screenWidth"></app-body>
     </div>
-  </nav>
-  <div class="wizard-content">
-    <router-outlet></router-outlet>
   </div>
-</div>
-
-<!-- Show app-jana only if wizard is finished -->
-<app-jana *ngIf="wizardConfigService.wizardFinished"></app-jana>
+</ng-template>
