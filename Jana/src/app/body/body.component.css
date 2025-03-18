@@ -5,10 +5,11 @@
     position: relative;
     top:0;
     transition: all .5s ease;
-    background: #ffffff;
+    background: #dad2d2;
     padding: 5rem;
     min-height: 100vh;
     font-family: 'Roboto', sans-serif;
+    overflow-y: auto; /* Allows scrolling if content exceeds viewport */
 }
 
 h1, h2, h3 {

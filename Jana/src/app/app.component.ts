@@ -35,22 +35,33 @@ export class AppComponent implements OnInit  {
 
   ngOnInit(): void {
     const startTime = Date.now();
-    const minimumLoadingTime = 1000; // minimum time in milliseconds (1 second)
+    const minimumLoadingTime = 1000; // minimum time in milliseconds
     this.authService.currentUser$.subscribe(user => {
-      // Update local flag based on actual Firebase state
-      this.isLoggedIn = !!user;
-      if (!this.isLoggedIn) {
-        localStorage.removeItem('isLoggedIn');
+      // Log for debugging
+      console.log('Firebase auth state:', user);
+      
+      // Instead of immediately removing the flag, you could:
+      // - Check if user is explicitly null after a delay
+      // - Or use a flag that indicates Firebase has finished initializing
+      if (user !== null) {
+        this.isLoggedIn = true;
+      } else {
+        // Optionally delay removal until after a certain timeout
+        setTimeout(() => {
+          if (!this.isLoggedIn) {
+            localStorage.removeItem('isLoggedIn');
+          }
+        }, 500); // adjust as needed
       }
+  
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, minimumLoadingTime - elapsed);
-
-      // Delay hiding the loading screen by the remaining time
       setTimeout(() => {
         this.isLoading = false;
       }, remaining);
     });
   }
+  
 
   isSideNavCollapsed = false;
   screenWidth = 0;

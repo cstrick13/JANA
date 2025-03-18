@@ -1,12 +1,13 @@
 :host {
   display: flex;
   justify-content: center;
-  align-items: center;
-  background-color: #000; /* black background */
-  min-height: 100vh; /* fill at least full viewport height */
+  /* Remove align-items: center so content can expand downward */
+  background-color: #dad2d2;
+  min-height: 100vh; /* or height: 100vh */
   width: 100%;
   margin: 0;
   padding: 0;
+  overflow-y: auto; /* Allows scrolling if content exceeds viewport */
 }
 
 .container {

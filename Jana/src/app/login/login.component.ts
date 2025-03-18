@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { 
+  browserLocalPersistence,
   createUserWithEmailAndPassword, 
   getAuth, 
+  setPersistence, 
   signInWithEmailAndPassword, 
   updateProfile 
 } from 'firebase/auth';
@@ -29,22 +31,27 @@ export class LoginComponent {
   async onLogin() {
     console.log('Login button clicked', this.loginObj);
     const auth = getAuth();
+  
     try {
+      // Set persistence to local so that the session is retained after reload
+      await setPersistence(auth, browserLocalPersistence);
+  
       const userCredential = await signInWithEmailAndPassword(auth, this.loginObj.userName, this.loginObj.password);
       const user = userCredential.user;
       console.log('User logged in:', user);
       localStorage.setItem('isLoggedIn', 'true');
+  
       // Set role based on email and navigate
       if (this.loginObj.userName === 'admin@domain.com') {
         localStorage.setItem('role', 'admin');
         console.log('Role set to:', localStorage.getItem('role'));
-        this.router.navigate(['/admin-dashboard']).then(() => {
+        this.router.navigate(['/home']).then(() => {
           location.reload();
         });
       } else {
         localStorage.setItem('role', 'operator');
         console.log('Role set to:', localStorage.getItem('role'));
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/home']);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -78,10 +85,10 @@ export class LoginComponent {
       // Set role based on email and navigate accordingly
       if (registerEmail.value === 'admin@domain.com') {
         localStorage.setItem('role', 'admin');
-        this.router.navigate(['/admin-dashboard']);
+        this.router.navigate(['/home']);
       } else {
         localStorage.setItem('role', 'operator');
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/home']);
       }
     } catch (error) {
       console.error('Registration error:', error);

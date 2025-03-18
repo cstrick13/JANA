@@ -59,20 +59,21 @@ export class SidenavComponent {
   }
 
   loadNavDataBasedOnRole(role: string): void {
-    const adminNavData = [
-      { routeLink: 'admin-dashboard', icon: 'fas fa-home', label: 'Dashboard' },
-      { routeLink: 'create', icon: 'fas fa-wrench', label: 'Build' },
+    const userNavData = [
+      { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
+      { routeLink: 'create', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
 
-    const operatorNavData = [
-      { routeLink: 'dashboard', icon: 'fas fa-home', label: 'Dashboard' },
-      { routeLink: 'create', icon: 'fas fa-wrench', label: 'Build' },
-      { routeLink: 'export', icon: 'fas fa-file', label: 'Export' },
+    const adminNavData = [
+      { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
+      { routeLink: 'create', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
 
     // Update navData based on role
-    this.navData = role === 'Admin' ? adminNavData : operatorNavData;
+    this.navData = role === 'Admin' ? adminNavData : userNavData;
   }
 }

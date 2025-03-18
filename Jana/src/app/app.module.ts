@@ -47,7 +47,8 @@ import { environment } from '../environments/environment';
     HeaderComponent,
     SidenavComponent,
     DaltonDemoComponent,
-    BodyComponent
+    BodyComponent,
+    LoginComponent
   ],
   imports: [
     BrowserModule,

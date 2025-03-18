@@ -147,11 +147,12 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       antialias: true,
     });
     this.renderer.setSize(800, 800);
-    this.renderer.setClearColor(0x000000, 1);
-  
-    // 2) Create Scene
+
+    // Use #dad2d2 as a hex color (0xdad2d2)
+    this.renderer.setClearColor(0xdad2d2, 1);
+    
     this.scene = new THREE.Scene();
-    this.scene.background = null;
+    this.scene.background = new THREE.Color(0xdad2d2); 
   
     // 3) Create Camera
     this.camera = new THREE.PerspectiveCamera(45,1, 0.1, 1000);

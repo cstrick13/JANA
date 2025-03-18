@@ -9,12 +9,12 @@ export const navbarData = [
     {
         routeLink: 'create',
         icon: 'fas fa-wrench', // Change 'fal' to 'fas' if using solid icons
-        label: 'Build'
+        label: 'Monitor'
     },
     {
         routeLink: 'export',
         icon: 'fas fa-file', // Change 'fal' to 'fas' if using solid icons
-        label: 'Export'
+        label: 'Jana'
     },
     {
         routeLink: 'settings',

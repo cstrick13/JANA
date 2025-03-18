@@ -8,20 +8,15 @@ import { AuthService } from './auth.service';
   providedIn: 'root'
 })
 export class AuthGuard implements CanActivate {
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private router: Router) {}
 
-  canActivate(): Observable<boolean> {
-    // Wait for the currentUser$ observable to emit a value
-    return this.authService.currentUser$.pipe(
-      take(1), // Only take the first emitted value
-      map(user => {
-        if (user) {
-          return true; // User is authenticated, allow route activation
-        } else {
-          this.router.navigate(['/login']); // Not logged in, redirect to login
-          return false;
-        }
-      })
-    );
+  canActivate(): boolean {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (isLoggedIn) {
+      return true;
+    } else {
+      this.router.navigate(['/login']);
+      return false;
+    }
   }
 }

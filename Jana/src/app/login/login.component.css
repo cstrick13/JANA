@@ -52,7 +52,7 @@
     padding: 77px 61px 66px;
   
     /* Semi-transparent background to let the backdrop show through */
-    background: rgba(216, 156, 94, 0.2); /* Adjust alpha for more/less transparency */
+    background: rgba(255, 251, 247, 0.2); 
   
     /* Glassmorphism "frosted" effect */
     backdrop-filter: blur(10px);         /* Modern browsers */
@@ -72,6 +72,15 @@
   h3 {
     text-transform: uppercase;
     font-size: 25px;
+    color: #ffffff;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 33px;
+  }
+
+  h1 {
+    text-transform: uppercase;
+    font-size: 50px;
     color: #ffffff;
     letter-spacing: 3px;
     text-align: center;

@@ -6,10 +6,17 @@ import { Wizard3Component } from "./wizard-3/wizard-3.component";
 import { DaltonDemoComponent } from "./dalton-demo/dalton-demo.component";
 import { JanaComponent } from "./jana/jana.component";
 import { AuthGuard } from "./auth.guard";
+import { LoginComponent } from "./login/login.component";
 
 
 
 const routeConfig: Routes = [
+    {
+        path: "home",
+        component: HomeComponent,
+        title: "Home",
+        canActivate: [AuthGuard]
+    },
     {
         path: "",
         component: HomeComponent,
@@ -40,6 +47,11 @@ const routeConfig: Routes = [
     path: "recording",
     component: DaltonDemoComponent,
     title: "Dalton Demo",
+    },
+    {
+        path: "login",
+        component: LoginComponent,
+        title: "Login",
     },
 
 ]
