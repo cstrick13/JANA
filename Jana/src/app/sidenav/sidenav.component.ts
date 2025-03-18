@@ -61,14 +61,14 @@ export class SidenavComponent {
   loadNavDataBasedOnRole(role: string): void {
     const userNavData = [
       { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
-      { routeLink: 'create', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
       { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
 
     const adminNavData = [
       { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
-      { routeLink: 'create', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
       { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];

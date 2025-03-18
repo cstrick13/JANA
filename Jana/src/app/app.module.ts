@@ -29,12 +29,14 @@ import { HeaderComponent } from './header/header.component';
 import { SidenavComponent } from './sidenav/sidenav.component';
 import { DaltonDemoComponent } from './dalton-demo/dalton-demo.component';
 import { BodyComponent } from './body/body.component';
+import { AnalyticsComponent } from './analytics/analytics.component';
 
 
 import { getAuth } from 'firebase/auth';
 
 import { initializeApp, getApps } from 'firebase/app';
 import { environment } from '../environments/environment';
+
 
 @NgModule({
   declarations: [
@@ -48,7 +50,8 @@ import { environment } from '../environments/environment';
     SidenavComponent,
     DaltonDemoComponent,
     BodyComponent,
-    LoginComponent
+    LoginComponent,
+    AnalyticsComponent
   ],
   imports: [
     BrowserModule,

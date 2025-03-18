@@ -7,6 +7,7 @@ import { DaltonDemoComponent } from "./dalton-demo/dalton-demo.component";
 import { JanaComponent } from "./jana/jana.component";
 import { AuthGuard } from "./auth.guard";
 import { LoginComponent } from "./login/login.component";
+import { AnalyticsComponent } from "./analytics/analytics.component";
 
 
 
@@ -42,6 +43,11 @@ const routeConfig: Routes = [
         path: "step3",
         component: Wizard3Component,
         title: "Wizard 3",
+    },
+    {
+        path: "analytics",
+        component: AnalyticsComponent,
+        title: "Analytics",
     },
     {
     path: "recording",
