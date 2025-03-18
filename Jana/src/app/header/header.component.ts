@@ -67,6 +67,7 @@ export class HeaderComponent {
       this.hasProfile = false;
       // Navigate to the login page
       this.router.navigate(['/login']);
+      window.location.reload();
     }).catch(error => {
       console.error('Error during logout:', error);
     });

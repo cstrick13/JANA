@@ -48,11 +48,6 @@ const routeConfig: Routes = [
     component: DaltonDemoComponent,
     title: "Dalton Demo",
     },
-    {
-        path: "login",
-        component: LoginComponent,
-        title: "Login",
-    },
 
 ]
 
