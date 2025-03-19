@@ -8,10 +8,10 @@ import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-    selector: 'app-jana',
-    templateUrl: './jana.component.html',
-    styleUrl: './jana.component.css',
-    standalone: false
+  selector: 'app-jana',
+  standalone: false,
+  templateUrl: './jana.component.html',
+  styleUrl: './jana.component.css'
 })
 export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -147,12 +147,11 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       antialias: true,
     });
     this.renderer.setSize(800, 800);
-
-    // Use #dad2d2 as a hex color (0xdad2d2)
     this.renderer.setClearColor(0xdad2d2, 1);
-    
+  
+    // 2) Create Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xdad2d2); 
+    this.scene.background = new THREE.Color(0xdad2d2); ;
   
     // 3) Create Camera
     this.camera = new THREE.PerspectiveCamera(45,1, 0.1, 1000);
@@ -485,40 +484,34 @@ vec3 fade(vec3 t) {
                 this.isWaitingForAgent = false;
                 return;
             }
-
             const decoder = new TextDecoder();
             finalReply = ""; // Reset before processing
-
             while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunkText = decoder.decode(value, { stream: true });
-                console.log('Received SSE chunk:', chunkText);
-
-                const lines = chunkText.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const message = JSON.parse(line.slice(6).trim());
-
-                            if (message.type === 'Result') {
-                                finalReply = message.message.trim();
-                                console.log('Final AI response:', finalReply);
-                            }
-
-                            if (message.status === 'completed') {
-                                console.log('SSE processing completed.');
-                                await reader.cancel();
-                                break;
-                            }
-                        } catch (err) {
-                            console.error('Error parsing SSE data:', err);
-                        }
-                    }
-                }
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunkText = decoder.decode(value, { stream: true });
+              console.log('SSE chunk from agent:', chunkText);
+              const lines = chunkText.split('\n');
+              finalReply = chunkText
+              // for (const line of lines) {
+              //   if (line.startsWith('data: ')) {
+              //     const jsonStr = line.slice('data: '.length).trim();
+              //     try {
+              //       const message = JSON.parse(jsonStr);
+              //       if (message.type === 'Result') {
+              //         finalReply = message.message;
+              //       }
+              //       if (message.status === 'completed') {
+              //         console.log('SSE stream completed');
+              //         await reader.cancel();
+              //         break;
+              //       }
+              //     } catch (err) {
+              //       console.error('Error parsing SSE chunk:', err);
+              //     }
+              //   }
+              // }
             }
-
             this.isWaitingForAgent = false;
 
             // 6) Validate finalReply (Prevent empty responses)
