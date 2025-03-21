@@ -1,12 +1,69 @@
-<mat-card class="widget-card">
+<div class="dashboard">
+
+  <!-- CPU Widget -->
+  <mat-card class="widget-card cpu-card" [class.critical]="cpuUtilization > 90">
     <div class="header">
-      <mat-icon>{{ icon }}</mat-icon>
-      <span class="title">{{ title }}</span>
+      <mat-icon>computer</mat-icon>
+      <span class="title">CPU</span>
     </div>
     <div class="module-name">
-      {{ moduleName }}: {{ utilization }}% {{ title === 'CPU' ? 'Utilization' : 'Memory Usage' }}
+      {{ moduleName }}: {{ cpuUtilization }}% Utilization
     </div>
-    <mat-progress-bar mode="determinate" [value]="utilization"></mat-progress-bar>
-    <div class="description">Average across all CPUs of the module</div>
+    <mat-progress-bar mode="determinate" [value]="cpuUtilization"></mat-progress-bar>
+    <div class="description">CPU Usage Across All Cores</div>
   </mat-card>
-  
+
+  <!-- Memory Widget -->
+  <mat-card class="widget-card memory-card" [class.critical]="memoryUtilization > 90">
+    <div class="header">
+      <mat-icon>memory</mat-icon>
+      <span class="title">Memory</span>
+    </div>
+    <div class="module-name">
+      {{ moduleName }}: {{ memoryUtilization }}% Memory Usage
+    </div>
+    <mat-progress-bar mode="determinate" [value]="memoryUtilization"></mat-progress-bar>
+    <div class="description">Memory Usage of the Module</div>
+  </mat-card>
+
+  <!-- Firmware Widget -->
+  <mat-card class="widget-card">
+    <div class="header">
+      <mat-icon>info</mat-icon>
+      <span class="title">Firmware</span>
+    </div>
+    <div class="content">
+      <p><strong>Current Version:</strong> {{ currentVersion }}</p>
+      <p><strong>Primary Version:</strong> {{ primaryVersion }}</p>
+      <p><strong>Secondary Version:</strong> {{ secondaryVersion }}</p>
+    </div>
+  </mat-card>
+
+  <!-- Fans Widget -->
+  <mat-card class="widget-card">
+    <div class="header">
+      <mat-icon>toys</mat-icon>
+      <span class="title">Fans</span>
+    </div>
+    <div class="module-name">
+      <p><strong>Total Fans:</strong> {{ totalFans }}</p>
+      <p><strong>Critical:</strong> {{ criticalFans }}</p>
+      <p><strong>Warnings:</strong> {{ warningFans }}</p>
+    </div>
+    <div class="description">Out of a total of {{ totalFans }} fans</div>
+  </mat-card>
+
+  <!-- Logs Widget -->
+  <mat-card class="widget-card">
+    <div class="header">
+      <mat-icon>list</mat-icon>
+      <span class="title">Log</span>
+    </div>
+    <div class="module-name">
+      <p><strong>Critical:</strong> {{ criticalLogs }}</p>
+      <p><strong>Warnings:</strong> {{ warningLogs }}</p>
+    </div>
+    <div class="description">New log entries over the last 15 seconds</div>
+  </mat-card>
+
+</div>
