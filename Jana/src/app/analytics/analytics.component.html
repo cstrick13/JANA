@@ -1,1 +1,12 @@
-<p>analytics works!</p>
+<mat-card class="widget-card">
+    <div class="header">
+      <mat-icon>{{ icon }}</mat-icon>
+      <span class="title">{{ title }}</span>
+    </div>
+    <div class="module-name">
+      {{ moduleName }}: {{ utilization }}% {{ title === 'CPU' ? 'Utilization' : 'Memory Usage' }}
+    </div>
+    <mat-progress-bar mode="determinate" [value]="utilization"></mat-progress-bar>
+    <div class="description">Average across all CPUs of the module</div>
+  </mat-card>
+  

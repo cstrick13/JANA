@@ -1,0 +1,33 @@
+.widget-card {
+    width: 250px;
+    padding: 16px;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: bold;
+  }
+  
+  .module-name {
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .description {
+    font-size: 12px;
+    color: gray;
+    margin-top: 8px;
+  }
+  
+  mat-progress-bar {
+    margin-top: 8px;
+    height: 6px;
+  }
+  
