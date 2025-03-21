@@ -44,6 +44,10 @@ export class AuthService {
     localStorage.setItem('role', role);
     this.currentRoleSubject.next(role);
   }
+  updateCurrentUser(user: User | null): void {
+    this.currentUserSubject.next(user);
+    console.log('Updated current user:', user);
+  }
 
   // Log out the user and reset the role if needed
   logout(): Promise<void> {

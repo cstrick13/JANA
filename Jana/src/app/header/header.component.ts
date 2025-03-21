@@ -36,7 +36,7 @@ export class HeaderComponent {
       this.isLoggedIn = !!user;
       if (user) {
         // Assuming the user displayName is set (or you can pull data from a user service)
-        this.userName = user.displayName || 'User';
+        this.userName = localStorage.getItem('displayName') || 'User';
         // Optionally, get the role from localStorage or another property
         this.userRole = localStorage.getItem('role') || 'operator';
       } else {
@@ -44,6 +44,7 @@ export class HeaderComponent {
         this.userRole = '';
       }
       console.log('Authentication status updated:', this.isLoggedIn);
+      console.log('Authentication status updated:', this.isLoggedIn, 'Username:', this.userName);
     });
   }
 
@@ -65,6 +66,7 @@ export class HeaderComponent {
       this.isLoggedIn = false;
       this.currentUser = null;
       this.hasProfile = false;
+      localStorage.removeItem('displayName');
       // Navigate to the login page
       this.router.navigate(['/login']);
       window.location.reload();

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { 
   browserLocalPersistence,
@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword, 
   updateProfile 
 } from 'firebase/auth';
+import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-login',
@@ -22,7 +23,7 @@ export class LoginComponent {
     password: '',
   };
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private cdr:ChangeDetectorRef,private authService: AuthService) {}
 
   onChangeLogin() {
     this.state = AuthenticatorCompState.LOGIN;
@@ -77,19 +78,14 @@ export class LoginComponent {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail.value, registerPassword.value);
       const user = userCredential.user;
       console.log('User registered:', user);
+
+      localStorage.setItem('isLoggedIn', 'true');
       
       // Optionally update the user's displayName with the provided username
       await updateProfile(user, { displayName: registerUsername.value });
-      console.log('User profile updated with displayName:', registerUsername.value);
-
-      // Set role based on email and navigate accordingly
-      if (registerEmail.value === 'admin@domain.com') {
-        localStorage.setItem('role', 'admin');
-        this.router.navigate(['/home']);
-      } else {
-        localStorage.setItem('role', 'operator');
-        this.router.navigate(['/home']);
-      }
+      await user.reload();
+      localStorage.setItem('displayName', registerUsername.value);
+      this.authService.updateCurrentUser(user);
     } catch (error) {
       console.error('Registration error:', error);
       alert('Registration failed. Please check your credentials and try again.');
