@@ -65,4 +65,14 @@ mat-progress-bar {
     margin-top: 8px;
     height: 6px;
   }
+
+  .clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  .clickable:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+  }
   

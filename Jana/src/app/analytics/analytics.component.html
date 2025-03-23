@@ -54,7 +54,7 @@
   </mat-card>
 
   <!-- Logs Widget -->
-  <mat-card class="widget-card">
+  <mat-card class="widget-card clickable" (click)="openLogPopup()">
     <div class="header">
       <mat-icon>list</mat-icon>
       <span class="title">Log</span>
@@ -65,5 +65,4 @@
     </div>
     <div class="description">New log entries over the last 15 seconds</div>
   </mat-card>
-
 </div>
