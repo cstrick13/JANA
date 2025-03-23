@@ -20,6 +20,7 @@ API_VERSION = "v10.12"
 BASE_URL = "https://{switch_ip}/rest/{api_version}"
 VERIFY_SSL = False
 TIMEOUT = 10
+DEBUG = False
 
 
 # Login function
@@ -57,7 +58,10 @@ def login_to_switch(switch_ip: Annotated[str, "The IP address of the switch"],
 
         # Check for successful login
         if response.status_code == 200:
-            print("Login successful!")
+            if DEBUG:
+                print(f"Login successful with status code: {response.status_code}")
+                print(response.text)
+            # print("Login successful!")
             return session
 
         else:
@@ -98,7 +102,10 @@ def logout_from_switch(switch_ip: Annotated[str, "The IP address of the switch"]
 
         # Check for successful logout
         if response.status_code == 200:
-            print("Logout successful!")
+            if DEBUG:
+                print(f"Logout successful with status code: {response.status_code}")
+                print(response.text)
+            # print("Logout successful!")
             return True
         
         else:
@@ -149,7 +156,9 @@ def cli_command(switch_ip: Annotated[str, "The IP address of the switch"],
 
         # Check for successful cli command execution
         if response.status_code == 200:
-            print(f"CLI command {command} executed successfully.")
+            if DEBUG:
+                print(f"CLI command {command} executed successfully with status code: {response.status_code}")
+            # print(f"CLI command {command} executed successfully.")
             return response.text
         
         else:
@@ -354,4 +363,150 @@ def ssh_command(switch_ip, username, password, command):
     "show ztp information"
   ]
 }
+
+Useful commands:
+- boot history
+- show clock
+- show environment
+- show interface brief
+- show interface error-statistics
+- show interface lag
+- show interface physical
+- show interface statistics
+- show interface utilization
+- show interface (ALOT OF TOKENS)
+- show ip dns
+- show lldp local
+- show lldp neighbor
+- show mac-address-table
+- show resources
+- show system resource-utilization (ALOT OF TOKENS)
+- show uptime
+- show version
+- show vlan
+- show vrf
+- show vsf detail
+- show vsf link detail
+- show vsf link error-detail
+- show vsf topology
+
+
+Maybe useful commands:
+- show capacities
+- show capacities-status
+- show class ip
+- show class ipv6
+- show copp-policy statistics
+- show dhcp-server
+- show dhcpv4-snooping binding
+- show dhcpv4-snooping
+- show dhcpv6-server
+- show dhcpv6-snooping binding
+- show dhcpv6-snooping
+- show interface qos
+- show interface queues
+- show ip helper-address
+- show ipv6 neighbors all-vrfs
+- show ipv6 neighbors
+- show lacp aggregates
+- show lacp interfaces
+- show ntp associations
+- show ntp servers
+- show ntp status
+- show power-over-ethernet
+- show spanning-tree detail (ALOT OF TOKENS)
+- show spanning-tree mst detail (ALOT OF TOKENS)
+- show tacacs-server
+
+
+Non useful commands:
+- show aaa accounting
+- show aaa authentication port-access interface all client-status
+- show aaa authentication
+- show aaa authorization
+- show aaa server-groups
+
+- show bgp all
+- show bgp all community
+- show bgp all extcommunity
+- show bgp all flap-statistics
+- show bgp all neighbors
+- show bgp all paths
+- show bgp all summary
+- show bgp all-vrf all
+- show bgp all-vrf all neighbors
+- show bgp all-vrf all paths
+- show bgp all-vrf all summary
+- show bgp ipv4 unicast
+- show bgp ipv4 unicast community
+- show bgp ipv4 unicast extcommunity
+- show bgp ipv4 unicast flap-statistics
+- show bgp ipv4 unicast neighbors
+- show bgp ipv4 unicast paths
+- show bgp ipv4 unicast summary
+- show bgp l2vpn evpn
+- show bgp l2vpn evpn extcommunity
+- show bgp l2vpn evpn neighbors
+- show bgp l2vpn evpn paths
+- show bgp l2vpn evpn summary
+
+- show dhcp-relay
+- show dhcpv6-relay
+
+- show evpn evi detail
+- show evpn evi
+- show evpn mac-ip
+- show evpn vtep-neighbor all-vrfs
+
+- show gbp role-mapping
+
+- show interface tunnel
+
+- show interface vxlan vni vteps
+- show interface vxlan vni
+- show interface vxlan vteps detail
+- show interface vxlan vteps
+- show interface vxlan
+
+- show ip igmp
+- show ip mroute
+- show ip multicast summary
+- show ip ospf all-vrfs
+- show ip ospf border-routers all-vrfs
+- show ip ospf interface all-vrfs
+- show ip pim
+- show ip route all-vrfsshow ipv6 helper-address
+- show ipv6 mld
+- show ipv6 mroute
+- show ipv6 ospfv3 all-vrfs
+- show ipv6 ospfv3 border-routers all-vrfs
+- show ipv6 ospfv3 interface all-vrfs
+- show ipv6 pim6
+- show loop-protect
+- show module
+- show nd-snooping binding
+- show nd-snooping prefix-list
+- show nd-snooping statistics
+- show nd-snooping
+- show port-access clients onboarding-method device-profile
+- show port-access clients onboarding-method dot1x
+- show port-access clients onboarding-method mac-auth
+- show port-access clients onboarding-method port-security
+- show port-access clients
+- show port-access gbp
+- show port-access policy
+- show port-access port-security interface all client-status
+- show port-access port-security interface all port-statistics
+- show port-access role local
+- show port-access role radius
+- show port-access port-security violation client-limit-exceeded interface all
+- show qos dscp-map
+- show qos queue-profile
+- show qos schedule-profile
+- show qos trust
+- show radius dyn-authorization
+- show radius-server
+- show system inventory
+- show ubt brief
+- show ubt information
 """
