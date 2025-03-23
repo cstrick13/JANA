@@ -30,6 +30,7 @@ import { SidenavComponent } from './sidenav/sidenav.component';
 import { DaltonDemoComponent } from './dalton-demo/dalton-demo.component';
 import { BodyComponent } from './body/body.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 
 import { getAuth } from 'firebase/auth';
@@ -50,8 +51,7 @@ import { environment } from '../environments/environment';
     SidenavComponent,
     DaltonDemoComponent,
     BodyComponent,
-    LoginComponent,
-    AnalyticsComponent
+    LoginComponent
   ],
   imports: [
     BrowserModule,
@@ -70,6 +70,8 @@ import { environment } from '../environments/environment';
     MatListModule,
     MatBadgeModule,
     MatCardModule,
+    MatProgressBarModule,
+    AnalyticsComponent,
     MatTabsModule,
     BrowserAnimationsModule, 
     ToastrModule.forRoot({
