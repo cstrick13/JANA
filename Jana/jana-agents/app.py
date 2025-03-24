@@ -5,7 +5,7 @@ from typing import List, Tuple
 import tempfile
 import re
 
-import RESTapi as SwitchApi
+import RESTapiAI as SwitchApi
 
 from autogen_core import (
     FunctionCall,
