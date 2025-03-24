@@ -50,3 +50,10 @@ __pycache__/
 *.pyd
 *.pyw
 *.pyz
+
+# Aruba Switch session cookies
+session.json
+session.pkl
+
+# Aruba Switch output files
+cx_switch_output_log.txt
