@@ -80,4 +80,4 @@ def tts():
 # It did not even give me the prompt it just went ahead and did it
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=True)

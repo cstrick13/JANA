@@ -321,7 +321,7 @@ vec3 fade(vec3 t) {
 
     try {
         // 1) Fetch TTS audio with the corrected speaker ID
-        const response = await fetch('http://localhost:5000/tts', {
+        const response = await fetch('http://localhost:5050/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: textToSpeak.trim(), speaker_id: speakerId }) 
@@ -439,7 +439,7 @@ vec3 fade(vec3 t) {
 
             // 2) Transcribe audio (Speech-to-Text)
             console.log("Sending recorded audio to transcription...");
-            const sttResponse = await fetch('http://localhost:5000/transcribe', {
+            const sttResponse = await fetch('http://localhost:5050/transcribe', {
                 method: 'POST',
                 body: formData
             });
