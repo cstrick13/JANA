@@ -5,7 +5,8 @@ from typing import List, Tuple
 import tempfile
 import re
 
-import RESTapiAI as SwitchApi
+import RESTapi_CX as SwitchApi
+from command_reference import command_reference
 
 from autogen_core import (
     FunctionCall,
@@ -85,7 +86,7 @@ class AIAgent(RoutedAgent):
                     result = await self._tools[call.name].run_json(arguments, ctx.cancellation_token)
                     result_as_str = self._tools[call.name].return_value_as_string(result)
                     tool_call_results.append(
-                        FunctionExecutionResult(call_id=call.id, content=result_as_str, is_error=False)
+                        FunctionExecutionResult(call_id=call.id, content=result_as_str, is_error=False, name=call.name)
                     )
                 elif call.name in self._delegate_tools:
                     # Execute the tool to get the delegate agent's topic type
@@ -100,7 +101,8 @@ class AIAgent(RoutedAgent):
                                 FunctionExecutionResult(
                                     call_id=call.id,
                                     content=f"transferred to {topic_type}. Adopt persona immediately.",
-                                    is_error=False
+                                    is_error=False,
+                                    name=call.name
                                 )
                             ]
                         )
@@ -191,50 +193,14 @@ class CodeExecutor(RoutedAgent):
 
 
 
-DEFAULT_SWITCH_IP = "10.0.150.100"
+DEFAULT_SWITCH_IP = "10.0.150.150"
 DEFAULT_USERNAME = "admin"
-DEFAULT_PASSWORD = "admin"
+DEFAULT_PASSWORD = ""
 
-SESSION_COOKIE = ""  
+SESSION_COOKIE: any
 
 
 # Function Tools     
-def get_switch_info():
-    if SESSION_COOKIE == "":
-        return "Not logged into switch. Invalid session cookie."
-    info = SwitchApi.get_system_info(switch_ip=DEFAULT_SWITCH_IP, session_cookie=SESSION_COOKIE)
-    return info
-get_switch_info_tool = FunctionTool(
-    get_switch_info,
-    description="Gets the current version of the connected switch"
-)       
-
-
-def get_switch_logs():
-    result = SwitchApi.execute_command(DEFAULT_SWITCH_IP, SESSION_COOKIE, "show log r") # Shows recent logs
-    return result
-get_switch_logs_tool = FunctionTool(
-    get_switch_logs,
-    description="Get the recent network logs from the switch."
-)
-
-def get_switch_leaf_nodes():
-    result = SwitchApi.execute_command(DEFAULT_SWITCH_IP, SESSION_COOKIE, "show lldp info remote-device")
-    return result
-get_switch_leaf_nodes_tool = FunctionTool(
-    get_switch_leaf_nodes,
-    description="Retrieves information about directly connected devices (leaf nodes) on the switch using LLDP (Link Layer Discovery Protocol)"
-)
-
-def switch_ping_address(ip_address: str):
-    result = SwitchApi.execute_command(DEFAULT_SWITCH_IP, SESSION_COOKIE, f"ping {ip_address}") # Pings address
-    return result
-switch_ping_address_tool = FunctionTool(
-    switch_ping_address,
-    description="Sends a ping from the switch to the provided address."
-)
-    
-
 def log_into_switch():
     global SESSION_COOKIE
     result = SwitchApi.login_to_switch(switch_ip=DEFAULT_SWITCH_IP, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD)
@@ -247,25 +213,21 @@ log_into_switch_tool = FunctionTool(
 
 
 def log_out_switch():
-    result = SwitchApi.logout_from_switch(switch_ip=DEFAULT_SWITCH_IP, session_cookie=SESSION_COOKIE)
+    result = SwitchApi.logout_from_switch(switch_ip=DEFAULT_SWITCH_IP, session=SESSION_COOKIE)
     return result
 log_out_switch_tool = FunctionTool(
     log_out_switch,
     description="Logs out of the switch. MUST be called after all switch actions are finished."
 )
 
+def execute_command(command: str):
+    result = SwitchApi.cli_command(switch_ip=DEFAULT_SWITCH_IP, session=SESSION_COOKIE, command=command)
+    return result
 
-def reboot_switch():
-    if SESSION_COOKIE == "":
-        return "Not logged into the switch. Session cookie invalid."
-    time.sleep(4)
-    return "Success!"
-reboot_switch_tool = FunctionTool(
-    reboot_switch,
-    description="Reboots the switch. ONLY call if the user directly asks."
+execute_command_tool = FunctionTool(
+    execute_command,
+    description="Write a custom command for the switch. Use given command reference to write commands."
 )
-
-
 
 async def execute_code(language: str, code_block: str):
     work_dir = tempfile.mkdtemp()
@@ -340,16 +302,16 @@ async def create_runtime():
 
                 Your team members are:
                     •	Switch admin: Handles ALL tasks related to networking with a switch.
-                    •	Code writer: Handles tasks that can be solved through code but NOT related to the switch.
 
                 Rules:
                     1.	Assign exactly one team member per task. Do not delegate the same task to both members.
                     2.	If a task involves both switching and coding, prioritize the most relevant aspect and assign it to the best fit.
                     3.	Once the selected member completes their task, summarize their results in a short and concise manner, ensuring it is relevant to the user’s request.
+                    4.  DO NOT RESPOND TO THE USER DIRECTLY. The delegates are experts who can help the user more than you can.
             """),
             model_client=model_client,
             tools=[],
-            delegate_tools=[delegate_to_switch_admin_tool, delegate_to_code_writer_tool],
+            delegate_tools=[delegate_to_switch_admin_tool],
             agent_topic_type=manager_agent_topic_type,
             user_topic_type=user_topic_type,
         ),
@@ -361,28 +323,20 @@ async def create_runtime():
         factory=lambda: AIAgent(
             "The switch admin that manages a physical switch",
             system_message=SystemMessage(
-                content="""
+                content=f"""
                     You are a switch network admin. You have control over a physical switch.
-                    The switch has the following capabilities:
-                        - Log in to switch (Must always be called first)
-                        - Log out of switch (Must alwyas be called last)
-                        - switch version
-                        - getting switch logs
-                        - reboot switch (Only if the user asks) (Does NOT require logging out as the switch session is reset)
-                    You are to use the available tools to complete the given task.
-                    Before any actions can me made regarding the switch, you MUST use the log in tool.
-                    After all switch actions are finished, you MUST log out of the switch (UNLESS switch is rebooted).
-                    If the switch tools give an error, there is NOTHING you can do so stop and inform the user of the error.
+                    Before any commands are executed, you MUST first log in to the switch. 
+                    After commands are run, you MUST log out of the switch.
+                    Those functionalities are provided as tools NOT commands to be run.
+                    
+                    Here is the reference for the commands you can execute:
+                    {command_reference}
                 """),
             model_client=model_client,
             tools=[
-                get_switch_info_tool,
-                reboot_switch_tool,
+                execute_command_tool,
                 log_into_switch_tool,
                 log_out_switch_tool,
-                get_switch_logs_tool,
-                get_switch_leaf_nodes_tool,
-                switch_ping_address_tool
             ],
             delegate_tools=[],
             agent_topic_type=switch_admin_agent_topic_type,
@@ -390,32 +344,32 @@ async def create_runtime():
         )
     )
     
-    code_writer = await AIAgent.register(
-        runtime,
-        type=code_writer_agent_topic_type,
-        factory=lambda: AIAgent(
-            description="Writes code to be executed.",
-            system_message=SystemMessage(
-                content="""
-                    Write python scripts in markdown code blocks. The code you write will be executed, but there is no way to display the results of the 
-                    code you write except to print the results or to save any images to a file in the current directory.
-                    All code written MUST be within the same response. This means any functions you write must be in the same response for the tool call.
-                    Example python code:
-                    '''
-                        def main():
-                            return "Hello World"
+    # code_writer = await AIAgent.register(
+    #     runtime,
+    #     type=code_writer_agent_topic_type,
+    #     factory=lambda: AIAgent(
+    #         description="Writes code to be executed.",
+    #         system_message=SystemMessage(
+    #             content="""
+    #                 Write python scripts in markdown code blocks. The code you write will be executed, but there is no way to display the results of the 
+    #                 code you write except to print the results or to save any images to a file in the current directory.
+    #                 All code written MUST be within the same response. This means any functions you write must be in the same response for the tool call.
+    #                 Example python code:
+    #                 '''
+    #                     def main():
+    #                         return "Hello World"
                         
-                        print(main())
-                    '''
-                    You MUST write the code before delegating to the executor.
-                """),
-            model_client=model_client,
-            tools=[execute_code_tool],
-            delegate_tools=[],
-            agent_topic_type=code_writer_agent_topic_type,
-            user_topic_type=user_topic_type
-        )
-    )
+    #                     print(main())
+    #                 '''
+    #                 You MUST write the code before delegating to the executor.
+    #             """),
+    #         model_client=model_client,
+    #         tools=[execute_code_tool],
+    #         delegate_tools=[],
+    #         agent_topic_type=code_writer_agent_topic_type,
+    #         user_topic_type=user_topic_type
+    #     )
+    # )
 
 
     # code_executor = await CodeExecutor.register(
@@ -437,7 +391,7 @@ async def create_runtime():
     # The switch agent will recieve messages to its type only
     await runtime.add_subscription(TypeSubscription(switch_admin_agent_topic_type, switch_agent.type))
     
-    await runtime.add_subscription(TypeSubscription(code_writer_agent_topic_type, code_writer.type))
+    # await runtime.add_subscription(TypeSubscription(code_writer_agent_topic_type, code_writer.type))
     
     # await runtime.add_subscription(TypeSubscription(code_executor_agent_topic_type, code_executor.type))
     return runtime
