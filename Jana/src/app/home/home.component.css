@@ -1,36 +1,117 @@
-.widget-card {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 1rem;
-  background-color: #fff;
-  height: 100%; /* Ensures consistent card height in a row */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+.welcome-card {
+  background: #FFF5E6;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.widget-header {
+.widget-card, .sidebar-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.fake-chart {
+  height: 150px;
+  background: #F0F4F8;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #AAA;
+}
+.widget-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  border-radius: 12px;
+  padding: 1rem;
+  color: #fff;
+  height: 100%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.widget-header h5 {
-  margin: 0;
-  font-size: 1.1rem;
+.widget-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
 }
 
-.widget-header .status {
-  background-color: #eee;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-weight: bold;
+/* Background variants */
+.widget-purple { background: #7F56D9; }
+.widget-yellow { background: #FBBF24; }
+.widget-orange { background: #FB923C; }
+.widget-cyan   { background: #06B6D4; }
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.switch input { display: none; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background: rgba(255,255,255,0.5);
+  border-radius: 20px;
+  transition: .2s;
+}
+.slider:before {
+  content: "";
+  position: absolute;
+  height: 16px; width: 16px;
+  left: 2px; bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: .2s;
+}
+input:checked + .slider {
+  background: rgba(255,255,255,0.8);
+}
+input:checked + .slider:before {
+  transform: translateX(16px);
 }
 
-.widget-body p {
-  margin: 0;
-  font-size: 0.9rem;
+.device-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  padding: 1.5rem;
+  height: 120px;
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.device-card i {
+  font-size: 28px;
+  margin-bottom: 0.5rem;
+}
+
+.device-purple { background: #7F56D9; }
+.device-yellow { background: #FBBF24; }
+.device-orange { background: #FB923C; }
+.device-cyan   { background: #06B6D4; }
+
+.card.sidebar-card table {
+  width: 100%;
+}
+.card.sidebar-card th {
+  font-weight: 600;
+  font-size: 0.85rem;
   color: #555;
 }
+.card.sidebar-card td {
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+
+
+
+

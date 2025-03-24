@@ -1,31 +1,147 @@
-<div class="container my-4">
-  <div class="row">
-    <!-- Widget 1 -->
-    <div class="col-md-3 mb-3">
-      <div class="widget-card">
-        <div class="widget-header">
-          <h5>Analytics</h5>
-          <span class="status">0</span>
+<div class="container-fluid dashboard mt-4">
+  <div class="row gx-4">
+
+    <!-- LEFT COLUMN (2/3 width) -->
+    <div class="col-lg-8 d-flex flex-column gap-4">
+
+      <!-- Welcome Banner -->
+      <div class="card welcome-card p-4">
+        <h2>Hello, {{ userName || 'Network Admin' }}!</h2>
+        <p class="mb-2">placeholder info right now</p>
+      </div>
+
+      <!-- Colourful Widgets -->
+      <div class="row gx-3">
+        <div class="col-6 col-md-3">
+          <div class="widget-card widget-yellow">
+            <div class="widget-info"><i class="fas fa-server"></i> Servers</div>
+            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+          </div>
         </div>
-        <div class="widget-body">
-          <p>Information about analytics goes here.</p>
+        <div class="col-6 col-md-3">
+          <div class="widget-card widget-orange">
+            <div class="widget-info"><i class="fas fa-exclamation-triangle"></i> Active Alerts</div>
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="widget-card widget-cyan">
+            <div class="widget-info"><i class="fas fa-chart-line"></i> Bandwidth Usage</div>
+            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+          </div>
         </div>
       </div>
+
+      <!-- Main Chart -->
+      <div class="card sidebar-card p-4">
+        <h5>Bandwidth Usage (Last 24h)</h5>
+        <div class="fake-chart mt-3">[Chart-Placeholder]</div>
+      </div>
+      <div class="card sidebar-card p-3 mt-4">
+        <h6>Top Bandwidth Consumers</h6>
+        <table class="table table-borderless mt-2 mb-0">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th class="text-end">Usage (GB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Workstation‑101</td>
+              <td class="text-end">52.4</td>
+            </tr>
+            <tr>
+              <td>Server‑DB01</td>
+              <td class="text-end">48.9</td>
+            </tr>
+            <tr>
+              <td>Printer‑HR</td>
+              <td class="text-end">22.1</td>
+            </tr>
+            <tr>
+              <td>WiFi‑Guest</td>
+              <td class="text-end">15.3</td>
+            </tr>
+            <tr>
+              <td>Router‑Edge</td>
+              <td class="text-end">8.6</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
     </div>
 
-    <!-- Widget 2 -->
-    <div class="col-md-3 mb-3">
-      <div class="widget-card">
-        <div class="widget-header">
-          <h5>Firmware</h5>
-          <span class="status">0</span>
+    <!-- RIGHT COLUMN (1/3 width) -->
+    <div class="col-lg-4 d-flex flex-column gap-4">
+      <div class="card sidebar-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0">Network Devices</h6>
+          <div class="d-flex align-items-center gap-2">
+            <span>ON</span>
+            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            <i class="fas fa-chevron-right"></i>
+          </div>
         </div>
-        <div class="widget-body">
-          <p>Firmware details and status here.</p>
+      
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="device-card device-purple">
+              <i class="fas fa-network-wired"></i>
+              <span>Core Router</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="device-card device-yellow">
+              <i class="fas fa-exchange-alt"></i>
+              <span>Edge Switch</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="device-card device-orange">
+              <i class="fas fa-exchange-alt"></i>
+              <span>Access Switch 1</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="device-card device-cyan">
+              <i class="fas fa-exchange-alt"></i>
+              <span>Access Switch 2</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+      
 
-    <!-- Add more widgets as needed -->
+      <div class="card sidebar-card p-3">
+        <h6>Server Status</h6>
+        <ul class="list-group list-group-flush mt-2">
+          <li class="list-group-item d-flex justify-content-between">Auth Server <span class="badge bg-success">Online</span></li>
+          <li class="list-group-item d-flex justify-content-between">DB Server <span class="badge bg-success">Online</span></li>
+          <li class="list-group-item d-flex justify-content-between">Backup Server <span class="badge bg-danger">Offline</span></li>
+        </ul>
+      </div>
+
+      <div class="card sidebar-card p-3">
+        <h6>Recent Alerts</h6>
+        <ul class="list-group list-group-flush mt-2">
+          <li class="list-group-item">
+            <small class="text-muted">10:12 AM</small><br/>
+            <strong>High packet loss on Router‑02</strong>
+          </li>
+          <li class="list-group-item">
+            <small class="text-muted">09:45 AM</small><br/>
+            <strong>Firmware update available for Switch‑03</strong>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card sidebar-card p-3">
+        <h6>Power Consumed</h6>
+        <div class="fake-chart mt-2">[Chart Placeholder]</div>
+      </div>
+
+    </div>
   </div>
 </div>

@@ -86,6 +86,7 @@ export class LoginComponent {
       await user.reload();
       localStorage.setItem('displayName', registerUsername.value);
       this.authService.updateCurrentUser(user);
+      this.router.navigate(['/home'])
     } catch (error) {
       console.error('Registration error:', error);
       alert('Registration failed. Please check your credentials and try again.');

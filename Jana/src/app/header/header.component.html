@@ -1,13 +1,19 @@
 <mat-toolbar class="header-toolbar" [ngClass]="getHeaderClass()">
-  <div class="Login-Text">
-    <!-- Conditionally display user role or welcome message -->
-    <span *ngIf="isLoggedIn; else notLoggedIn">
-      Welcome, {{ userName }}
-    </span>
-    <ng-template #notLoggedIn>
-      WASP
-    </ng-template>
+  <div class="search-container">
+    <div class="custom-search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Search..."
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()"
+      />
+      <button mat-icon-button *ngIf="searchQuery" (click)="searchQuery=''">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
   </div>
+  
   <div class="toolbar-content">
     <ul class="toolbar-items">
       <!-- Conditionally display notifications based on admin status -->

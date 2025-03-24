@@ -23,12 +23,14 @@ export class HeaderComponent {
   currentUser: any; // Track current user
   hasProfile: boolean = false; // Track if the user has a profile
   authUnsubscribe: any; // Unsubscribe function
+  searchQuery = '';
   @Input() isSidebarCollapsed: boolean = false;
 
   constructor(
     private cdr: ChangeDetectorRef,
     private router: Router, private authService: AuthService // Typed injection for AuthService
   ) {}
+
 
   ngOnInit() {
     // Subscribe to authentication changes
@@ -73,5 +75,10 @@ export class HeaderComponent {
     }).catch(error => {
       console.error('Error during logout:', error);
     });
+}
+onSearch(): void {
+  if (!this.searchQuery.trim()) { return; }
+  // TODO: wire up actual search logic (router navigation, service call, etc.)
+  console.log('Searching for:', this.searchQuery);
 }
 }

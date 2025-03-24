@@ -31,6 +31,10 @@ import { DaltonDemoComponent } from './dalton-demo/dalton-demo.component';
 import { BodyComponent } from './body/body.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule     } from '@angular/material/input';
+
+
 
 
 import { getAuth } from 'firebase/auth';
@@ -51,7 +55,7 @@ import { environment } from '../environments/environment';
     SidenavComponent,
     DaltonDemoComponent,
     BodyComponent,
-    LoginComponent
+    LoginComponent,
   ],
   imports: [
     BrowserModule,
@@ -73,6 +77,8 @@ import { environment } from '../environments/environment';
     MatProgressBarModule,
     AnalyticsComponent,
     MatTabsModule,
+    MatFormFieldModule,
+    MatInputModule,
     BrowserAnimationsModule, 
     ToastrModule.forRoot({
       timeOut: 10000, // 10 seconds

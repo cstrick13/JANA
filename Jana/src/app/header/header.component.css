@@ -28,6 +28,39 @@
     justify-content: space-between;
     
   }
+  .custom-search {
+    display: flex;
+    align-items: center;
+    width: 600px;
+    max-width: 800px;
+    height: 40px;
+    background: #e4e4e9;
+    border-radius: 5px;
+    padding: 0 12px;
+  }
+  
+  .custom-search mat-icon {
+    font-size: 20px;
+    color: #6B7280;
+    margin-right: 8px;
+  }
+  
+  .custom-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #6B7280;
+  }
+  
+  .custom-search button {
+    margin-left: 8px;
+  }
+  
+  
+  
+  
   .mark-read {
     color: #6587ac; /* Adjust color as needed */
     cursor: pointer;
