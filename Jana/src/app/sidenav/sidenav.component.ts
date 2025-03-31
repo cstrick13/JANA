@@ -68,7 +68,20 @@ export class SidenavComponent {
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
 
+    const superAdminNavData = [
+      { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
+      { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
+      { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
+    ]
+
     // Update navData based on role
-    this.navData = role === 'Admin' ? adminNavData : userNavData;
+    if(role == 'Admin'){
+      this.navData = adminNavData;
+    } else if(role == 'Super'){
+      this.navData = superAdminNavData;
+    }else{
+      this.navData = userNavData;
+    }
   }
 }
