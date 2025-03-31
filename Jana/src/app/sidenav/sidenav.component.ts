@@ -30,21 +30,16 @@ export class SidenavComponent {
       this.screenWidth = window.innerWidth;
     }
 
-    // Subscribe to role changes using the updated observable
+    // Subscribe to role changes to update navData when the role changes
     this.authService.currentRole$.subscribe((role) => {
-      this.loadNavDataBasedOnRole(role); // Update navData when role changes
+      this.loadNavDataBasedOnRole(role);
     });
 
-    // Initial load of role-based navigation data
-    const initialRole = this.authService.getRole();
-    this.loadNavDataBasedOnRole(initialRole);
-
-    // Listen to route changes and refresh navigation data on route change
+    // Optionally, on every route change, force a reload of the role from storage.
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
-        const currentRole = this.authService.getRole();
-        this.loadNavDataBasedOnRole(currentRole);
+        this.authService.loadRole();
       });
   }
 

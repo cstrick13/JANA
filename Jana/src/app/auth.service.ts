@@ -1,60 +1,113 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { getAuth, onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signInWithCustomToken, signOut, User } from 'firebase/auth';
+import { invoke } from '@tauri-apps/api/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  // BehaviorSubject to hold the current user (null if not logged in)
   private currentUserSubject: BehaviorSubject<User | null> = new BehaviorSubject<User | null>(null);
   public currentUser$: Observable<User | null> = this.currentUserSubject.asObservable();
 
-  // BehaviorSubject for the current role, initialized from localStorage (or 'operator' by default)
-  private currentRoleSubject: BehaviorSubject<string> = new BehaviorSubject<string>(this.getRole());
+  private currentRoleSubject: BehaviorSubject<string> = new BehaviorSubject<string>('operator');
   public currentRole$: Observable<string> = this.currentRoleSubject.asObservable();
 
   constructor() {
     const auth = getAuth();
-    // Listen for authentication state changes
-    onAuthStateChanged(auth, (user) => {
-      this.currentUserSubject.next(user);
-      console.log('Firebase auth state changed:', user);
-      // Optionally, you could update the role here if it depends on user info
-    });
+    // Set persistence explicitly
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            // Normal auth state update if we have a user.
+            this.currentUserSubject.next(user);
+            console.log('Firebase auth state changed:', user);
+          } else {
+            // Firebase session is lost. Check Tauri storage to see if user was logged in.
+            try {
+              const flag = await invoke<string>('get_local_storage', { key: 'isLoggedIn' });
+              if (flag === 'true') {
+                console.warn('Firebase session lost but Tauri indicates user was logged in. Attempting reauthentication...');
+                await this.reauthenticateUser();
+                // Do not overwrite the subject here—reauthenticateUser() will update it.
+              } else {
+                // No reauthentication triggered, so set to null.
+                this.currentUserSubject.next(null);
+                console.log('Firebase auth state changed: null');
+              }
+            } catch (err) {
+              console.error('Error retrieving isLoggedIn from Tauri storage:', err);
+              this.currentUserSubject.next(null);
+            }
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('Error setting persistence:', error);
+      });
+    this.loadRole();
   }
 
-  // Returns true if a user is logged in
+  // Reauthenticate the user using a stored custom token
+  private async reauthenticateUser(): Promise<void> {
+    const auth = getAuth();
+    try {
+      const token = await invoke<string>('get_local_storage', { key: 'customToken' });
+      console.log('Retrieved custom token for reauthentication:', token);
+      if (token) {
+        const userCredential = await signInWithCustomToken(auth, token);
+        console.log('User reauthenticated successfully:', userCredential.user);
+        this.currentUserSubject.next(userCredential.user);
+      } else {
+        console.warn('No custom token found for reauthentication.');
+        this.currentUserSubject.next(null);
+      }
+    } catch (error) {
+      console.error('Reauthentication failed:', error);
+      this.currentUserSubject.next(null);
+    }
+  }
+
   isAuthenticated(): boolean {
-    return this.currentUserSubject.value != null;
+    return this.currentUserSubject.value !== null;
   }
 
-  // Returns the current user (or null)
   getUser(): User | null {
     return this.currentUserSubject.value;
   }
 
-  // Returns the current role stored in localStorage (or defaults to 'operator')
-  getRole(): string {
-    return localStorage.getItem('role') || 'operator';
+  async loadRole(): Promise<void> {
+    try {
+      const role = await invoke<string>('get_local_storage', { key: 'role' });
+      this.currentRoleSubject.next(role || 'operator');
+    } catch (error) {
+      console.error('Error loading role from Tauri storage:', error);
+      this.currentRoleSubject.next('operator');
+    }
   }
 
-  // Helper method to update the role both in localStorage and in the BehaviorSubject
-  updateRole(role: string): void {
-    localStorage.setItem('role', role);
-    this.currentRoleSubject.next(role);
+  async updateRole(role: string): Promise<void> {
+    try {
+      await invoke('set_local_storage', { key: 'role', value: role });
+      this.currentRoleSubject.next(role);
+    } catch (error) {
+      console.error('Error updating role in Tauri storage:', error);
+    }
   }
+
   updateCurrentUser(user: User | null): void {
     this.currentUserSubject.next(user);
     console.log('Updated current user:', user);
   }
 
-  // Log out the user and reset the role if needed
   logout(): Promise<void> {
     const auth = getAuth();
-    // Optionally reset the role on logout
+    // Reset role and update storage for logout
     this.updateRole('operator');
-    localStorage.removeItem('isLoggedIn');
+    invoke('set_local_storage', { key: 'isLoggedIn', value: 'false' })
+      .then(result => console.log('isLoggedIn updated in Tauri storage on logout:', result))
+      .catch(err => console.error('Error updating isLoggedIn in Tauri storage on logout:', err));
     return signOut(auth);
   }
 }

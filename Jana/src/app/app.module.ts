@@ -37,10 +37,11 @@ import { MatInputModule     } from '@angular/material/input';
 
 
 
-import { getAuth } from 'firebase/auth';
+import { browserLocalPersistence, getAuth, indexedDBLocalPersistence, initializeAuth } from 'firebase/auth';
 
-import { initializeApp, getApps } from 'firebase/app';
-import { environment } from '../environments/environment';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { environment } from '../.env/environment';
+import { TauriPersistence } from './tauri-firebase';
 
 
 @NgModule({
@@ -97,15 +98,19 @@ import { environment } from '../environments/environment';
 })
 export class AppModule {
   constructor() {
+    let app;
     if (!getApps().length) {
       console.log('Initializing Firebase...');
-      initializeApp(environment.firebaseConfig);
+      app = initializeApp(environment.firebaseConfig);
       console.log('Firebase initialized.');
     } else {
+      app = getApp();
       console.log('Firebase already initialized.');
     }
 
-    const auth = getAuth();
+    const auth = initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+    });
     if (auth) {
       console.log('Firebase Auth instance is available.');
     } else {

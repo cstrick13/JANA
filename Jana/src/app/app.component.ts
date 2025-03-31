@@ -1,83 +1,86 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet } from '@angular/router';
-import { invoke } from "@tauri-apps/api/core";
-import { RouterModule } from '@angular/router';
-import { HomeComponent } from './home/home.component';
-import { JanaComponent } from './jana/jana.component';
+import { Router } from '@angular/router';
+import { invoke } from '@tauri-apps/api/core';
 import { WizardConfigService } from './wizard-config.service';
 import { AuthService } from './auth.service';
 
-
-interface SideNavToggle{
+interface SideNavToggle {
   screenWidth: number;
-  collapsed:boolean;
+  collapsed: boolean;
 }
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrl: './app.component.css',
-    standalone: false
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+  standalone: false
 })
-export class AppComponent implements OnInit  {
+export class AppComponent implements OnInit {
   title = 'Interface';
-  role: string = '';
-  isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  role = '';
+  isLoggedIn = false;
   isLoading = true;
-
+  authChecked = false;
+  isSideNavCollapsed = false;
+  screenWidth = 0;
+  greetingMessage = '';
 
   constructor(
     public router: Router,
     public wizardConfigService: WizardConfigService,
-    private authService: AuthService 
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    console.log('➡️ Reading persisted login flag…');
+    // Immediately update isLoggedIn from Tauri storage:
+    invoke<string>('get_local_storage', { key: 'isLoggedIn' })
+      .then(val => {
+        console.log('⬅️ get_local_storage returned:', val);
+        this.isLoggedIn = (val === 'true');
+        console.log('🔑 isLoggedIn set to:', this.isLoggedIn);
+      })
+      .catch(err => console.error('❌ Error reading isLoggedIn:', err));
+  
     const startTime = Date.now();
-    const minimumLoadingTime = 1000; // minimum time in milliseconds
+    const minimumLoadingTime = 500;
+  
     this.authService.currentUser$.subscribe(user => {
-      // Log for debugging
       console.log('Firebase auth state:', user);
-      
-      // Instead of immediately removing the flag, you could:
-      // - Check if user is explicitly null after a delay
-      // - Or use a flag that indicates Firebase has finished initializing
-      if (user !== null) {
+      this.authChecked = true; // We've received an auth update
+  
+      if (user) {
         this.isLoggedIn = true;
-      } else {
-        // Optionally delay removal until after a certain timeout
-        setTimeout(() => {
-          if (!this.isLoggedIn) {
-            localStorage.removeItem('isLoggedIn');
-          }
-        }, 500); // adjust as needed
+        console.log('✅ User logged in — isLoggedIn =', this.isLoggedIn);
       }
   
       const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, minimumLoadingTime - elapsed);
       setTimeout(() => {
         this.isLoading = false;
-      }, remaining);
+        // Only decide to show login if no user is authenticated after the minimum loading time.
+        if (!this.isLoggedIn && this.authChecked) {
+          console.log('➡️ No authenticated user after auth check.');
+          // Optionally, you can clear the login flag in Tauri storage here:
+          invoke('set_local_storage', { key: 'isLoggedIn', value: 'false' })
+            .then(res => console.log('⬅️ set_local_storage returned:', res))
+            .catch(err => console.error('❌ Error clearing login flag:', err));
+          // Navigate to login
+          this.router.navigate(['/login']);
+        }
+      }, Math.max(0, minimumLoadingTime - elapsed));
     });
   }
   
 
-  isSideNavCollapsed = false;
-  screenWidth = 0;
-  onToggleSideNav(data:SideNavToggle): void{
+  onToggleSideNav(data: SideNavToggle): void {
     this.screenWidth = data.screenWidth;
     this.isSideNavCollapsed = data.collapsed;
   }
 
-  greetingMessage = "";
-
   greet(event: SubmitEvent, name: string): void {
     event.preventDefault();
-
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    invoke<string>("greet", { name }).then((text) => {
-      this.greetingMessage = text;
-    });
+    invoke<string>('greet', { name })
+      .then(text => this.greetingMessage = text)
+      .catch(err => console.error('Greet invoke error:', err));
   }
 }

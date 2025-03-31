@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators';
-import { AuthService } from './auth.service';
+import { invoke } from '@tauri-apps/api/core';
 
 @Injectable({
   providedIn: 'root'
@@ -10,13 +8,21 @@ import { AuthService } from './auth.service';
 export class AuthGuard implements CanActivate {
   constructor(private router: Router) {}
 
-  canActivate(): boolean {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (isLoggedIn) {
-      return true;
-    } else {
-      this.router.navigate(['/login']);
-      return false;
-    }
+  canActivate(): Promise<boolean> {
+    return invoke<string>('get_local_storage', { key: 'isLoggedIn' })
+      .then(val => {
+        const loggedIn = (val === 'true');
+        if (loggedIn) {
+          return true;
+        } else {
+          this.router.navigate(['/login']);
+          return false;
+        }
+      })
+      .catch(err => {
+        console.error('Error reading isLoggedIn:', err);
+        this.router.navigate(['/login']);
+        return false;
+      });
   }
 }

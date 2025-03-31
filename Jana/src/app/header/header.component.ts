@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { invoke } from '@tauri-apps/api/core';
 
 @Component({
   selector: 'app-header',
@@ -37,18 +38,35 @@ export class HeaderComponent {
     this.authService.currentUser$.subscribe(user => {
       this.isLoggedIn = !!user;
       if (user) {
-        // Assuming the user displayName is set (or you can pull data from a user service)
-        this.userName = localStorage.getItem('displayName') || 'User';
-        // Optionally, get the role from localStorage or another property
-        this.userRole = localStorage.getItem('role') || 'operator';
+        // Get the display name from Tauri storage
+        invoke<string>('get_local_storage', { key: 'displayName' })
+          .then(name => {
+            this.userName = name || 'User';
+            console.log('Display name from Tauri:', this.userName);
+          })
+          .catch(err => {
+            console.error('Error reading displayName from Tauri storage:', err);
+            this.userName = 'User';
+          });
+  
+        // Get the role from Tauri storage
+        invoke<string>('get_local_storage', { key: 'role' })
+          .then(role => {
+            this.userRole = role || 'operator';
+            console.log('Role from Tauri:', this.userRole);
+          })
+          .catch(err => {
+            console.error('Error reading role from Tauri storage:', err);
+            this.userRole = 'operator';
+          });
       } else {
         this.userName = '';
         this.userRole = '';
       }
-      console.log('Authentication status updated:', this.isLoggedIn);
       console.log('Authentication status updated:', this.isLoggedIn, 'Username:', this.userName);
     });
   }
+  
 
   getHeaderClass() {
     return this.isSidebarCollapsed ? 'header-collapsed' : 'header-expanded';
@@ -61,21 +79,30 @@ export class HeaderComponent {
   
 
   onLogout() {
-    this.authService.logout().then(() => {
+    this.authService.logout().then(async () => {
       // Reset any local state after logout
-      this.userRole = ''; 
-      this.userName = ''; 
+      this.userRole = '';
+      this.userName = '';
       this.isLoggedIn = false;
       this.currentUser = null;
       this.hasProfile = false;
-      localStorage.removeItem('displayName');
-      // Navigate to the login page
+
+      try {
+        // Update Tauri storage: set 'isLoggedIn' to "false"
+        await invoke('set_local_storage', { key: 'isLoggedIn', value: 'false' });
+        // Clear displayName from Tauri storage by setting it to an empty string
+        await invoke('set_local_storage', { key: 'displayName', value: '' });
+      } catch (err) {
+        console.error('Error updating Tauri storage during logout:', err);
+      }
+
+      // Navigate to the login page and reload the window
       this.router.navigate(['/login']);
       window.location.reload();
     }).catch(error => {
       console.error('Error during logout:', error);
     });
-}
+  }
 onSearch(): void {
   if (!this.searchQuery.trim()) { return; }
   // TODO: wire up actual search logic (router navigation, service call, etc.)

@@ -9,6 +9,7 @@ import {
   updateProfile 
 } from 'firebase/auth';
 import { AuthService } from '../auth.service';
+import { invoke } from '@tauri-apps/api/core';
 
 @Component({
   selector: 'app-login',
@@ -34,31 +35,55 @@ export class LoginComponent {
     const auth = getAuth();
   
     try {
-      // Set persistence to local so that the session is retained after reload
+      // Set persistence so that the session is retained after reload
       await setPersistence(auth, browserLocalPersistence);
   
-      const userCredential = await signInWithEmailAndPassword(auth, this.loginObj.userName, this.loginObj.password);
+      // Sign in with email and password
+      const userCredential = await signInWithEmailAndPassword(
+        auth, 
+        this.loginObj.userName, 
+        this.loginObj.password
+      );
       const user = userCredential.user;
       console.log('User logged in:', user);
-      localStorage.setItem('isLoggedIn', 'true');
+
+      await invoke('set_local_storage', { key: 'displayName', value: user.displayName });
   
-      // Set role based on email and navigate
+      // Generate a custom token using the user's UID from your Tauri backend
+      const customToken = await invoke<string>('generate_custom_token', { uid: user.uid });
+      if (customToken) {
+        console.log('Custom token generated:', customToken);
+        // Save the custom token in Tauri storage for later reauthentication
+        const tokenResult = await invoke('set_local_storage', { key: 'customToken', value: customToken });
+        console.log('Custom token stored in Tauri storage:', tokenResult);
+      } else {
+        console.error('Custom token generation returned no token.');
+      }
+  
+      // Mark login status in Tauri storage
+      await invoke('set_local_storage', { key: 'isLoggedIn', value: 'true' });
+  
+      // Set role based on email
       if (this.loginObj.userName === 'admin@domain.com') {
         localStorage.setItem('role', 'admin');
         console.log('Role set to:', localStorage.getItem('role'));
-        this.router.navigate(['/home']).then(() => {
-          location.reload();
-        });
+        await invoke('set_local_storage', { key: 'role', value: 'admin' });
       } else {
         localStorage.setItem('role', 'operator');
         console.log('Role set to:', localStorage.getItem('role'));
-        this.router.navigate(['/home']);
+        await invoke('set_local_storage', { key: 'role', value: 'operator' });
       }
+  
+      // Navigate to the home page once all work is done
+      await this.router.navigate(['/home']);
     } catch (error) {
       console.error('Login error:', error);
       alert('Login failed. Please check your credentials.');
+      return; // Ensure we don't navigate to home on error.
     }
   }
+  
+  
 
   // New registration method using template reference variables
   async registerUser(
@@ -79,12 +104,27 @@ export class LoginComponent {
       const user = userCredential.user;
       console.log('User registered:', user);
 
-      localStorage.setItem('isLoggedIn', 'true');
+      try {
+        console.log('➡️ Invoking set_local_storage with:', { key: 'isLoggedIn', value: 'true' });
+        const result = await invoke('set_local_storage', { key: 'isLoggedIn', value: 'true' });
+        console.log('✅ invoke(set_local_storage) succeeded:', result);
+      } catch (err) {
+        console.error('❌ invoke(set_local_storage) failed:', err);
+      }
+      const customToken = await invoke<string>('generate_custom_token', { uid: user.uid });
+      if (customToken) {
+        console.log('Custom token generated:', customToken);
+        // Save the custom token in Tauri storage for later reauthentication
+        const tokenResult = await invoke('set_local_storage', { key: 'customToken', value: customToken });
+        console.log('Custom token stored in Tauri storage:', tokenResult);
+      } else {
+        console.error('Custom token generation returned no token.');
+      }
       
       // Optionally update the user's displayName with the provided username
       await updateProfile(user, { displayName: registerUsername.value });
       await user.reload();
-      localStorage.setItem('displayName', registerUsername.value);
+      await invoke('set_local_storage', { key: 'displayName', value: user.displayName });
       this.authService.updateCurrentUser(user);
       this.router.navigate(['/home'])
     } catch (error) {

@@ -4,6 +4,7 @@ import { Router, RouterOutlet } from '@angular/router';
 import { RouterModule } from '@angular/router';
 import Chart from 'chart.js/auto';
 import { AuthService } from '../auth.service';
+import { invoke } from '@tauri-apps/api/core';
 
 @Component({
     selector: 'app-home',
@@ -27,45 +28,40 @@ export class HomeComponent implements OnInit {
       ) {}
 
 
-    ngOnInit() {
+      ngOnInit() {
         // Subscribe to authentication changes
         this.authService.currentUser$.subscribe(user => {
           this.isLoggedIn = !!user;
           if (user) {
-            // Assuming the user displayName is set (or you can pull data from a user service)
-            this.userName = localStorage.getItem('displayName') || 'User';
-            // Optionally, get the role from localStorage or another property
-            this.userRole = localStorage.getItem('role') || 'operator';
+            // Get the display name from Tauri storage
+            invoke<string>('get_local_storage', { key: 'displayName' })
+              .then(name => {
+                this.userName = name || 'User';
+                console.log('Display name from Tauri:', this.userName);
+              })
+              .catch(err => {
+                console.error('Error reading displayName from Tauri storage:', err);
+                this.userName = 'User';
+              });
+      
+            // Get the role from Tauri storage
+            invoke<string>('get_local_storage', { key: 'role' })
+              .then(role => {
+                this.userRole = role || 'operator';
+                console.log('Role from Tauri:', this.userRole);
+              })
+              .catch(err => {
+                console.error('Error reading role from Tauri storage:', err);
+                this.userRole = 'operator';
+              });
           } else {
             this.userName = '';
             this.userRole = '';
           }
-          console.log('Authentication status updated:', this.isLoggedIn);
           console.log('Authentication status updated:', this.isLoggedIn, 'Username:', this.userName);
         });
       }
+      
 
-      ngAfterViewInit() {
-        new Chart(this.canvas.nativeElement, {
-          type: 'line',
-          data: {
-            labels: ['00:00','04:00','08:00','12:00','16:00','20:00','24:00'],
-            datasets: [{
-              label: 'Mbps',
-              data: [120,200,150,300,250,350,400],
-              fill: true,
-              tension: 0.4,
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              x: { display: true },
-              y: { display: true, beginAtZero: true }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
+    
 }
