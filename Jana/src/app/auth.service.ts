@@ -61,11 +61,15 @@ export class AuthService {
         this.currentUserSubject.next(userCredential.user);
       } else {
         console.warn('No custom token found for reauthentication.');
+        await invoke('set_local_storage', { key: 'isLoggedIn', value: 'false' });
         this.currentUserSubject.next(null);
+        this.logout();
       }
     } catch (error) {
       console.error('Reauthentication failed:', error);
+      await invoke('set_local_storage', { key: 'isLoggedIn', value: 'false' });
       this.currentUserSubject.next(null);
+      this.logout();
     }
   }
 
