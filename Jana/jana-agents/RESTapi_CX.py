@@ -12,7 +12,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Switch information (will be removed in the final version)
 SWITCH_IP = '10.0.150.150'
 USERNAME = 'admin'
-PASSWORD = 'admin'
+PASSWORD = ''
 
 
 # Constants
