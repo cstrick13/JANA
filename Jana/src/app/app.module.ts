@@ -43,6 +43,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { environment } from '../.env/environment';
 import { TauriPersistence } from './tauri-firebase';
 import { Firestore, getFirestore } from 'firebase/firestore';
+import { HomeComponent } from './home/home.component';
 
 
 @NgModule({
@@ -58,6 +59,7 @@ import { Firestore, getFirestore } from 'firebase/firestore';
     DaltonDemoComponent,
     BodyComponent,
     LoginComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,

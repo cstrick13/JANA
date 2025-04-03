@@ -67,9 +67,9 @@ export class LoginComponent {
       await invoke('set_local_storage', { key: 'isLoggedIn', value: 'true' });
       const docRef = doc(AppModule.db, 'users', user.uid);
       const docSnap = await getDoc(docRef);
-      let role = 'operator'; // default role
+      let role = 'worker'; // default role
       if (docSnap.exists()) {
-        role = docSnap.data()['role'] || 'user';
+        role = docSnap.data()['role'] || 'worker';
       }
       console.log('Retrieved role from Firestore:', role);
       await invoke('set_local_storage', { key: 'role', value: role });
@@ -103,9 +103,9 @@ export class LoginComponent {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail.value, registerPassword.value);
       const user = userCredential.user;
       console.log('User registered:', user);
-      let role = 'user'; 
+      let role = 'worker'; 
       await setDoc(doc(AppModule.db, 'users', user.uid), {
-        role: 'user', 
+        role: 'worker', 
         displayName: registerUsername.value,
         email: registerEmail.value,
       });

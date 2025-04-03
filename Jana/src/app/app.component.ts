@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { invoke } from '@tauri-apps/api/core';
 import { WizardConfigService } from './wizard-config.service';
@@ -43,7 +43,7 @@ export class AppComponent implements OnInit {
       .catch(err => console.error('❌ Error reading isLoggedIn:', err));
   
     const startTime = Date.now();
-    const minimumLoadingTime = 500;
+    const minimumLoadingTime = 2000;
   
     this.authService.currentUser$.subscribe(user => {
       console.log('Firebase auth state:', user);
@@ -70,7 +70,8 @@ export class AppComponent implements OnInit {
       }, Math.max(0, minimumLoadingTime - elapsed));
     });
   }
-  
+
+
 
   onToggleSideNav(data: SideNavToggle): void {
     this.screenWidth = data.screenWidth;
