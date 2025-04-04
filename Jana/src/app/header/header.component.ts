@@ -52,12 +52,12 @@ export class HeaderComponent {
         // Get the role from Tauri storage
         invoke<string>('get_local_storage', { key: 'role' })
           .then(role => {
-            this.userRole = role || 'operator';
+            this.userRole = role || 'worker';
             console.log('Role from Tauri:', this.userRole);
           })
           .catch(err => {
             console.error('Error reading role from Tauri storage:', err);
-            this.userRole = 'operator';
+            this.userRole = '';
           });
       } else {
         this.userName = '';

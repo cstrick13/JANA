@@ -21,6 +21,7 @@ export class HomeComponent implements OnInit {
     hasProfile: boolean = false; // Track if the user has a profile
     authUnsubscribe: any; // Unsubscribe function
     searchQuery = '';
+    isLoading: boolean = true;
 
     constructor(
         private cdr: ChangeDetectorRef,
@@ -29,38 +30,43 @@ export class HomeComponent implements OnInit {
 
 
       ngOnInit() {
+        // Start loading
+        this.isLoading = true;
+      
         // Subscribe to authentication changes
         this.authService.currentUser$.subscribe(user => {
           this.isLoggedIn = !!user;
           if (user) {
-            // Get the display name from Tauri storage
-            invoke<string>('get_local_storage', { key: 'displayName' })
-              .then(name => {
-                this.userName = name || 'User';
-                console.log('Display name from Tauri:', this.userName);
-              })
-              .catch(err => {
-                console.error('Error reading displayName from Tauri storage:', err);
-                this.userName = 'User';
-              });
-      
-            // Get the role from Tauri storage
-            invoke<string>('get_local_storage', { key: 'role' })
-              .then(role => {
-                this.userRole = role || 'operator';
-                console.log('Role from Tauri:', this.userRole);
-              })
-              .catch(err => {
-                console.error('Error reading role from Tauri storage:', err);
-                this.userRole = 'operator';
-              });
+            // Retrieve both display name and role concurrently
+            Promise.all([
+              invoke<string>('get_local_storage', { key: 'displayName' }),
+              invoke<string>('get_local_storage', { key: 'role' })
+            ])
+            .then(([name, role]) => {
+              this.userName = name || 'User';
+              this.userRole = role || 'operator';
+              console.log('Display name from Tauri:', this.userName);
+              console.log('Role from Tauri:', this.userRole);
+            })
+            .catch(err => {
+              console.error('Error reading from Tauri storage:', err);
+              // Set fallback values if retrieval fails
+              this.userName = 'User';
+              this.userRole = 'operator';
+            })
+            .finally(() => {
+              // Stop loading once both values have been handled
+              this.isLoading = false;
+            });
           } else {
             this.userName = '';
             this.userRole = '';
+            this.isLoading = false;
           }
           console.log('Authentication status updated:', this.isLoggedIn, 'Username:', this.userName);
         });
       }
+      
       
 
     

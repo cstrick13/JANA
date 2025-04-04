@@ -42,6 +42,8 @@ import { browserLocalPersistence, getAuth, indexedDBLocalPersistence, initialize
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { environment } from '../.env/environment';
 import { TauriPersistence } from './tauri-firebase';
+import { Firestore, getFirestore } from 'firebase/firestore';
+import { HomeComponent } from './home/home.component';
 
 
 @NgModule({
@@ -57,6 +59,7 @@ import { TauriPersistence } from './tauri-firebase';
     DaltonDemoComponent,
     BodyComponent,
     LoginComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,
@@ -97,6 +100,7 @@ import { TauriPersistence } from './tauri-firebase';
   bootstrap: [AppComponent]
 })
 export class AppModule {
+  static db: Firestore;
   constructor() {
     let app;
     if (!getApps().length) {
@@ -116,5 +120,8 @@ export class AppModule {
     } else {
       console.error('Firebase Auth instance is not available.');
     }
+    AppModule.db = getFirestore(app);
+    console.log('Firestore instance is available:', AppModule.db);
   }
 }
+

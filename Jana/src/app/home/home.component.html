@@ -5,10 +5,19 @@
     <div class="col-lg-8 d-flex flex-column gap-4">
 
       <!-- Welcome Banner -->
-      <div class="card welcome-card p-4">
-        <h2>Hello, {{ userName || 'Network Admin' }}!</h2>
-        <p class="mb-2">placeholder info right now</p>
+       <div class="card welcome-card p-4">
+      <div *ngIf="isLoading; else displayUser">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h2>Loading...</h2>
+        <p>Please wait while we load your dashboard.</p>
       </div>
+      <ng-template #displayUser>
+          <h2>Hello, {{ userName || 'Network Admin' }}!</h2>
+          <p class="mb-2">placeholder info right now</p>
+      </ng-template>
+    </div>
 
       <!-- Colourful Widgets -->
       <div class="row gx-3">

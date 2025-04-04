@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { 
   browserLocalPersistence,
@@ -8,8 +8,11 @@ import {
   signInWithEmailAndPassword, 
   updateProfile 
 } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 import { AuthService } from '../auth.service';
 import { invoke } from '@tauri-apps/api/core';
+import { AppModule } from '../app.module';
 
 @Component({
   selector: 'app-login',
@@ -62,17 +65,14 @@ export class LoginComponent {
   
       // Mark login status in Tauri storage
       await invoke('set_local_storage', { key: 'isLoggedIn', value: 'true' });
-  
-      // Set role based on email
-      if (this.loginObj.userName === 'admin@domain.com') {
-        localStorage.setItem('role', 'admin');
-        console.log('Role set to:', localStorage.getItem('role'));
-        await invoke('set_local_storage', { key: 'role', value: 'admin' });
-      } else {
-        localStorage.setItem('role', 'operator');
-        console.log('Role set to:', localStorage.getItem('role'));
-        await invoke('set_local_storage', { key: 'role', value: 'operator' });
+      const docRef = doc(AppModule.db, 'users', user.uid);
+      const docSnap = await getDoc(docRef);
+      let role = 'worker'; // default role
+      if (docSnap.exists()) {
+        role = docSnap.data()['role'] || 'worker';
       }
+      console.log('Retrieved role from Firestore:', role);
+      await invoke('set_local_storage', { key: 'role', value: role });
   
       // Navigate to the home page once all work is done
       await this.router.navigate(['/home']);
@@ -103,6 +103,13 @@ export class LoginComponent {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail.value, registerPassword.value);
       const user = userCredential.user;
       console.log('User registered:', user);
+      let role = 'worker'; 
+      await setDoc(doc(AppModule.db, 'users', user.uid), {
+        role: 'worker', 
+        displayName: registerUsername.value,
+        email: registerEmail.value,
+      });
+
 
       try {
         console.log('➡️ Invoking set_local_storage with:', { key: 'isLoggedIn', value: 'true' });
@@ -125,6 +132,7 @@ export class LoginComponent {
       await updateProfile(user, { displayName: registerUsername.value });
       await user.reload();
       await invoke('set_local_storage', { key: 'displayName', value: user.displayName });
+      await invoke('set_local_storage', { key: 'role', value: role });
       this.authService.updateCurrentUser(user);
       this.router.navigate(['/home'])
     } catch (error) {

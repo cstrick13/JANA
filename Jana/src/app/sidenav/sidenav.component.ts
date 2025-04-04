@@ -65,10 +65,31 @@ export class SidenavComponent {
       { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
       { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
       { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
+      { routeLink: '', icon: 'fas fa-users-cog', label: 'User Management' },
+      { routeLink: '', icon: 'fas fa-clipboard-list', label: 'System Logs' },
+      { routeLink: '', icon: 'fas fa-chart-line', label: 'Reports' },
+      { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
+    ];
+    
+    const superAdminNavData = [
+      { routeLink: 'home', icon: 'fas fa-home', label: 'Dashboard' },
+      { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
+      { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
+      { routeLink: '', icon: 'fas fa-users-cog', label: 'User Management' },
+      { routeLink: '', icon: 'fas fa-clipboard-list', label: 'System Logs' },
+      { routeLink: '', icon: 'fas fa-chart-line', label: 'Reports' },
+      { routeLink: '', icon: 'fas fa-user-shield', label: 'Permissions' },
+      { routeLink: '', icon: 'fas fa-search-plus', label: 'Audit Trail' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
 
     // Update navData based on role
-    this.navData = role === 'Admin' ? adminNavData : userNavData;
+    if(role == 'Admin'){
+      this.navData = adminNavData;
+    } else if(role == 'Super'){
+      this.navData = superAdminNavData;
+    }else{
+      this.navData = userNavData;
+    }
   }
 }
