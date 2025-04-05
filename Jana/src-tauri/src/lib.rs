@@ -1,12 +1,14 @@
-use std::{collections::HashMap, env, fs, net::TcpStream, path::PathBuf, sync::Mutex, time::Duration, io::Read};
+use std::{collections::HashMap, env, fs, net::TcpStream, path::PathBuf, time::Duration, io::Read};
 
-use chrono::{Duration, Utc};
+use chrono::{Duration as ChronoDuration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use ssh2::Session;
 use tauri::{AppHandle, Manager, State};
+use std::sync::Mutex as StdMutex;
+use tokio::sync::Mutex; // Use tokio's Mutex for async compatibility
 
 /// Load environment variables from the .env file
 fn init_dotenv() {
@@ -107,7 +109,7 @@ fn generate_custom_token(uid: String) -> Result<String, String> {
 
     let now = Utc::now();
     let iat = now.timestamp();
-    let exp = (now + Duration::hours(1)).timestamp();
+    let exp = (now + ChronoDuration::hours(1)).timestamp();
 
     let claims = CustomTokenClaims {
         iss: service_account_email.clone(),
@@ -149,13 +151,15 @@ pub struct SwitchSession {
 }
 
 /// Shared application state for managing the switch session.
+
+
 pub struct AppState {
     pub switch_session: Mutex<Option<SwitchSession>>,
 }
 
 /// Tauri command to log in to the switch.
 #[tauri::command]
-pub async fn login_to_switch(
+async fn login_to_switch(
     state: State<'_, AppState>,
     switch_ip: String,
     username: String,
@@ -196,8 +200,8 @@ pub async fn login_to_switch(
             client: client.clone(),
             switch_ip: switch_ip.clone(),
         };
-        let mut session_lock = state.switch_session.lock().unwrap();
-        *session_lock = Some(switch_session);
+        let mut session_lock = state.switch_session.lock().await;
+        *session_lock = Some(switch_session); // Correctly assign the value
         Ok("Login successful".into())
     } else {
         let status = response.status();
@@ -211,8 +215,8 @@ pub async fn login_to_switch(
 
 /// Tauri command to log out from the switch.
 #[tauri::command]
-pub async fn logout_from_switch(state: State<'_, AppState>) -> Result<String, String> {
-    let mut session_lock = state.switch_session.lock().unwrap();
+async fn logout_from_switch(state: State<'_, AppState>) -> Result<String, String> {
+    let mut session_lock = state.switch_session.lock().await;
     if let Some(switch_session) = session_lock.as_ref() {
         // Build the logout URL.
         let base_url = BASE_URL_TEMPLATE
@@ -250,11 +254,11 @@ pub async fn logout_from_switch(state: State<'_, AppState>) -> Result<String, St
 
 /// Tauri command to execute a CLI command on the switch.
 #[tauri::command]
-pub async fn cli_command(
+async fn cli_command(
     state: State<'_, AppState>,
     command: String,
 ) -> Result<String, String> {
-    let session_lock = state.switch_session.lock().unwrap();
+    let session_lock = state.switch_session.lock().await;
     if let Some(switch_session) = session_lock.as_ref() {
         // Build the CLI URL.
         let base_url = BASE_URL_TEMPLATE
@@ -291,7 +295,7 @@ pub async fn cli_command(
 
 /// Tauri command to execute an SSH command on the switch.
 #[tauri::command]
-pub async fn ssh_command(
+async fn ssh_command(
     switch_ip: String,
     username: String,
     password: String,
