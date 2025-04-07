@@ -30,6 +30,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/aruba-switch",
+      "resources/jana-agents",
+      "resources/server",
+      "resources/docker-compose.yml"
     ]
   }
 }
