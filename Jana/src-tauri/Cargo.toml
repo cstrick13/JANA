@@ -30,10 +30,4 @@ dotenv = "0.15"
 ssh2 = "0.9.5"
 reqwest = { version = "0.11", features = ["json", "cookies", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
-=======
-ssh2 = "0.9"
-reqwest = { version = "0.11", features = ["cookies", "rustls-tls", "json"] }
-
->>>>>>> 57080d5427de756f0dae7b4f4b7f92e4c41362ba
-
 
