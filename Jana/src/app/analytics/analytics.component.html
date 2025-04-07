@@ -1,5 +1,7 @@
 <div class="dashboard">
 
+  <!-- <mat-progress-bar *ngIf="isLoggingIn" mode="indeterminate" color="accent"></mat-progress-bar> -->
+
   <!-- CPU Widget -->
   <mat-card class="widget-card cpu-card" [class.critical]="cpuUtilization > 90">
     <div class="header">

@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { environment } from '../../.env/environment';
 
 @Component({
   selector: 'app-analytics',
@@ -19,26 +21,77 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
   styleUrls: ['./analytics.component.css']
 })
 export class AnalyticsComponent {
-  // CPU & Memory Data
+  // UI State
+  isLoggingIn = false;
+
+  // Example Hardware Data
   cpuUtilization = 50;
   memoryUtilization = 91;
   moduleName = 'Mgmt Module 1/1';
 
-  // Firmware Data
   currentVersion = "FL.10.12.1021";
   primaryVersion = "FL.10.12.1021";
   secondaryVersion = "FL.10.06.0120";
 
-  // Fans Data
   totalFans = 3;
   criticalFans = 0;
   warningFans = 0;
 
-  // Logs Data
   criticalLogs = 0;
   warningLogs = 0;
 
-  constructor(private dialog: MatDialog) {}
+  constructor(private dialog: MatDialog, private http: HttpClient) {}
+
+  ngOnInit() {
+    this.loginToSwitch('192.168.1.1'); // example IP
+  }
+
+  loginToSwitch(ip: string) {
+    this.isLoggingIn = true;
+
+    const body = new HttpParams()
+      .set('username', environment.ArubaInfo.username) // ideally pulled from env or UI
+      .set('password', environment.ArubaInfo.password); // same
+
+    const url = `https://${environment.ArubaInfo.arubaIP}}/rest/v10.04/login`;
+
+    this.http.post(url, body.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }).subscribe({
+      next: (res) => {
+        console.log('Login successful:', res);
+        this.isLoggingIn = false;
+      },
+      error: (err) => {
+        console.error('Login failed:', err);
+        this.isLoggingIn = false;
+      }
+    });
+  }
+
+  getResourceUtilization(ip: string, sessionCookie: string) {
+    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.04/system/subsystems?attributes=resource_utilization`;
+  
+    this.http.get(url, {
+      headers: {
+        'Cookie': `SESSION=${sessionCookie}`
+      }
+    }).subscribe({
+      next: (res: any) => {
+        const util = res.resource_utilization;
+  
+        this.cpuUtilization = util.cpu;
+        this.memoryUtilization = util.memory;
+        const cpu1m = util.cpu_avg_1_min;
+        const cpu5m = util.cpu_avg_5_min;
+  
+        console.log('CPU:', this.cpuUtilization, 'Memory:', this.memoryUtilization);
+      },
+      error: (err) => {
+        console.error('Failed to get utilization:', err);
+      }
+    });
+  }  
 
   openLogPopup() {
     this.dialog.open(LogPopupComponent, {
