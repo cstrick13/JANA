@@ -3,10 +3,16 @@ use serde_json;
 use tauri::{AppHandle, Manager};
 
 // For token generation
-use chrono::{Duration, Utc};
+use chrono::{Duration as ChronoDuration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Child};
+
+// For Aruba APIs
+use reqwest::{Client, Response};
+use dotenv::dotenv;
+use std::time::Duration;
+
 
 // Load environment variables from the .env file
 fn init_dotenv() {
@@ -95,7 +101,7 @@ fn generate_custom_token(uid: String) -> Result<String, String> {
     let audience = "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit".to_string();
     let now = Utc::now();
     let iat = now.timestamp();
-    let exp = (now + Duration::hours(1)).timestamp();
+    let exp = (now + ChronoDuration::hours(1)).timestamp();
 
     let claims = CustomTokenClaims {
         iss: service_account_email.clone(),
@@ -169,4 +175,70 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");
+}
+
+#[derive(Serialize)]
+struct LoginData<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+const API_VERSION: &str = "v10.04"; // Or whatever version you're targeting
+const VERIFY_SSL: bool = false;
+const TIMEOUT_SECONDS: u64 = 10;
+
+pub async fn login_to_switch(switch_ip: &str) -> Result<Client, String> {
+    dotenv().ok();
+
+    let username = env::var("SWITCH_USERNAME").map_err(|e| format!("Missing username: {}", e))?;
+    let password = env::var("SWITCH_PASSWORD").map_err(|e| format!("Missing password: {}", e))?;
+
+    let base_url = format!("https://{}/rest/{}/", switch_ip, API_VERSION);
+    let login_url = format!("{}login", base_url);
+
+    let login_data = LoginData {
+        username: &username,
+        password: &password,
+    };
+
+    let client = Client::builder()
+        .cookie_store(true)
+        .danger_accept_invalid_certs(!VERIFY_SSL)
+        .timeout(Duration::from_secs(TIMEOUT_SECONDS))
+        .build()
+        .map_err(|e| format!("Client build error: {}", e))?;
+
+    let res: Response = client
+        .post(&login_url)
+        .json(&login_data)
+        .send()
+        .await
+        .map_err(|e| format!("Login request failed: {}", e))?;
+
+    if res.status().is_success() {
+        Ok(client)
+    } else {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_else(|_| "No response body".to_string());
+        Err(format!("Login failed with status {}: {}", status, text))
+    }
+}
+
+pub async fn logout_from_switch(switch_ip: &str, client: &Client) -> Result<bool, String> {
+    let base_url = format!("https://{}/rest/{}/", switch_ip, API_VERSION);
+    let logout_url = format!("{}logout", base_url);
+
+    let res = client
+        .post(&logout_url)
+        .send()
+        .await
+        .map_err(|e| format!("Logout request failed: {}", e))?;
+
+    if res.status().is_success() {
+        Ok(true)
+    } else {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_else(|_| "No response body".to_string());
+        Err(format!("Logout failed with status {}: {}", status, text))
+    }
 }
