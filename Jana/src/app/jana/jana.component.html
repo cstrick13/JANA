@@ -1,28 +1,72 @@
-<div class="container">
-  <!-- Visualizer Section -->
-  <div class="visualizer">
-    <canvas #canvas></canvas>
-    <div class="info">
-      <button (click)="startRecording()">Start Recording</button>
-      <button (click)="stopRecording()">Stop Recording</button>
+<!-- Overall Layout -->
+<!-- Full-Page Chat Layout -->
+<div class="chat-page">
+  <!-- Scrollable messages area -->
+  <div class="chat-messages-container">
+    <div *ngFor="let msg of chatMessages" class="chat-message">
+      {{ msg }}
     </div>
   </div>
 
-  <!-- Chat Interface -->
-  <div class="chat-container">
-    <h3>Chat with Jana</h3>
-    <div class="chat-messages">
-      <div *ngFor="let msg of chatMessages" class="chat-message">
-        {{ msg }}
-      </div>
+  <!-- Fixed/Centered Input Bar -->
+  <div class="chat-input-centered">
+    <textarea
+    [(ngModel)]="newChatMessage"
+    placeholder="Ask Jana..."
+    rows="1"
+  ></textarea>
+    <div class="chatgpt-input-buttons">
+      <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
+        <i class="fa fa-microphone"></i>
+      </button>
     </div>
-    <div class="chat-input">
-      <input
-        type="text"
-        [(ngModel)]="newChatMessage"
-        placeholder="Type your message..."
-      />
-      <button (click)="sendChatMessage()">Send</button>
+    <button class="send-btn" (click)="sendChatMessage()">
+      <i class="fa fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+
+
+
+
+<!-- Modal remains unchanged -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content custom-modal-content">
+      
+      <!-- Custom Header with "traffic lights" -->
+      <div class="custom-modal-header">
+        <div class="traffic-lights">
+          <span class="light red"></span>
+          <span class="light yellow"></span>
+          <span class="light green"></span>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="custom-modal-body">
+        <!-- White circle with canvas -->
+        <div class="visualizer"> 
+          <!-- Replace width/height as needed -->
+          <canvas #canvas></canvas>
+        </div>
+        <!-- Bottom icons (replace with real icons or buttons) -->
+        <div class="modal-icons">
+          <!-- Example using Font Awesome icons -->
+          <!-- Make sure to include Font Awesome in your index.html or project -->
+          <button class="icon-button" (click)="startRecording()">
+            <i class="fa fa-microphone"></i>
+          </button>
+          <button class="icon-button" (click)="stopRecording()">
+            <i class="fa fa-stop"></i>
+          </button>
+          <button class="icon-button" data-bs-dismiss="modal" aria-label="Close">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+
