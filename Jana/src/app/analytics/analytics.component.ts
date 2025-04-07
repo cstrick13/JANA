@@ -24,9 +24,9 @@ export class AnalyticsComponent {
   // UI State
   isLoggingIn = false;
 
-  // Example Hardware Data
-  cpuUtilization = 50;
-  memoryUtilization = 91;
+  // Initial Hardware Data
+  cpuUtilization = 0;
+  memoryUtilization = 0;
   moduleName = 'Mgmt Module 1/1';
 
   currentVersion = "FL.10.12.1021";
@@ -53,7 +53,7 @@ export class AnalyticsComponent {
       .set('username', environment.ArubaInfo.username) // ideally pulled from env or UI
       .set('password', environment.ArubaInfo.password); // same
 
-    const url = `https://${environment.ArubaInfo.arubaIP}}/rest/v10.04/login`;
+    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.12/#/Login/post_login`;
 
     this.http.post(url, body.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -70,7 +70,7 @@ export class AnalyticsComponent {
   }
 
   getResourceUtilization(ip: string, sessionCookie: string) {
-    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.04/system/subsystems?attributes=resource_utilization`;
+    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.12/system/subsystems?attributes=resource_utilization`;
   
     this.http.get(url, {
       headers: {
@@ -82,6 +82,7 @@ export class AnalyticsComponent {
   
         this.cpuUtilization = util.cpu;
         this.memoryUtilization = util.memory;
+  
         const cpu1m = util.cpu_avg_1_min;
         const cpu5m = util.cpu_avg_5_min;
   
@@ -91,7 +92,7 @@ export class AnalyticsComponent {
         console.error('Failed to get utilization:', err);
       }
     });
-  }  
+  }
 
   openLogPopup() {
     this.dialog.open(LogPopupComponent, {
