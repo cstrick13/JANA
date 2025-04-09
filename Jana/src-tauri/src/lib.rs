@@ -156,6 +156,40 @@ fn start_docker_compose(app_handle: &AppHandle) -> std::io::Result<Child> {
         .spawn()
 }
 
+#[tauri::command]
+async fn login_switch(username: String, password: String, ip: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true) // 👈 Accept invalid certs (DEV ONLY!)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let url = format!("https://{}/rest/v10.12/login", ip); // Adjust endpoint if needed
+
+    let params = [
+        ("username", username),
+        ("password", password),
+    ];
+
+    let res = client
+        .post(&url)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let text = res.text().await.map_err(|e| e.to_string())?;
+
+    if status.is_success() {
+        Ok(text)
+    } else {
+        Err(format!("HTTP {}: {}", status, text))
+    }
+}
+
+
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     init_dotenv();
@@ -171,8 +205,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_local_storage,
             get_local_storage,
-            generate_custom_token
+            generate_custom_token,
+            login_switch
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");
 }
+
+

@@ -6,6 +6,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { environment } from '../../.env/environment';  // Adjust the path as needed
+import { invoke } from '@tauri-apps/api/core';
 
 @Component({
   selector: 'app-analytics',
@@ -44,37 +45,23 @@ export class AnalyticsComponent {
 
   ngOnInit() {
     // Start the login flow.
-    this.loginToSwitch();
+    this.loginFromFrontend();
   }
 
-  loginToSwitch() {
-    this.isLoggingIn = true;
-
-    // Build the form data for URL-encoded POST body.
-    const body = new HttpParams()
-      .set('username', environment.ArubaInfo.username)
-      .set('password', environment.ArubaInfo.password);
-
-    // Note: Make sure your environment configuration provides the proper API IP and version.
-    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.12/login`;
-
-    this.http.post(url, body.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      // withCredentials ensures the cookie/session is stored automatically.
-      withCredentials: true,
-    }).subscribe({
-      next: (res) => {
-        console.log('Login successful:', res);
-        this.isLoggingIn = false;
-        // Optionally, trigger the resource utilization call after login.
-        this.getResourceUtilization();
-      },
-      error: (err) => {
-        console.error('Login failed:', err);
-        this.isLoggingIn = false;
-      }
-    });
+  async loginFromFrontend() {
+    try {
+      const result = await invoke<string>('login_switch', {
+        username: 'admin',
+        password: '',
+        ip: '10.0.150.150', // or whatever IP your switch has
+      });
+  
+      console.log('Login successful:', result);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
   }
+  
 
   getResourceUtilization() {
     // This URL uses query parameters to ask for just the resource_utilization attributes.
