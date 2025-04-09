@@ -53,12 +53,12 @@ export class AnalyticsComponent implements OnDestroy {
 
   ngOnDestroy() {
     // Clean up when the component is destroyed.
-    if (this.utilizationInterval) {
-      clearInterval(this.utilizationInterval);
-    }
-    this.logOutFrontend();
+    //if (this.utilizationInterval) {
+    //  clearInterval(this.utilizationInterval);
+    //}
+    // this.logOutFrontend();
   }
-  
+
   async loginFromFrontend() {
     try {
       const result = await invoke<string>('login_switch', {
@@ -110,18 +110,28 @@ export class AnalyticsComponent implements OnDestroy {
     }
   }
   
-  openLogPopup() {
-    this.dialog.open(LogPopupComponent, {
-      width: '400px',
-      data: {
-        logs: [
-          'System boot complete.',
-          'User admin logged in.',
-          'Backup completed successfully.',
-          'No warnings detected.'
-        ]
-      }
-    });
+  async openLogPopup() {
+    try {
+      // Invoke the new Tauri command to fetch filtered logs.
+      const logsResult = await invoke<string>('get_event_logs', { ip: environment.ArubaInfo.arubaIP });
+      console.log('Fetched filtered logs:', logsResult);
+  
+      // Assume logsResult is a JSON string array (e.g. '["log entry 1", "log entry 2", ...]')
+      const logs: string[] = JSON.parse(logsResult);
+  
+      // Open the log popup with the fetched logs.
+      this.dialog.open(LogPopupComponent, {
+        width: '400px',
+        data: { logs }
+      });
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      // If there's an error fetching logs, open the popup with fallback data.
+      this.dialog.open(LogPopupComponent, {
+        width: '400px',
+        data: { logs: ['Failed to fetch logs', JSON.stringify(error)] }
+      });
+    }
   }
 }
 
@@ -129,7 +139,7 @@ export class AnalyticsComponent implements OnDestroy {
 import { Component as DialogComponent, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
-@DialogComponent({
+@Component({
   selector: 'app-log-popup',
   template: `
     <h2 mat-dialog-title>Logs</h2>

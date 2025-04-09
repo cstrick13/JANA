@@ -12,6 +12,7 @@ use std::process::{Command, Child};
 use reqwest::{Client, Response};
 use dotenv::dotenv;
 use std::time::Duration;
+use serde_json::Value;
 
 
 use tokio::sync::Mutex;
@@ -291,6 +292,62 @@ async fn get_utilization(ip: String) -> Result<String, String> {
     serde_json::to_string(&filtered).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn get_event_logs(ip: String) -> Result<String, String> {
+    // Retrieve the already logged-in session client.
+    let client = {
+        let session = SESSION_CLIENT.lock().await;
+        session.clone().ok_or("Not logged in")?
+    };
+
+    // Build the request URL.
+    let url = format!("https://{}/rest/v10.12/logs/event", ip);
+
+    // Define query parameters (curl encoded parameters will be set here as plain strings).
+    let query_params = [
+        ("priority", "7"),
+        ("since", "10 hours ago"),
+        ("until", "now"),
+        ("limit", "20"),
+    ];
+
+    // Send the GET request with the required headers.
+    let res = client
+        .get(&url)
+        .query(&query_params)
+        .header("Accept", "*/*")
+        .header("x-csrf-token", "CW7WOLEAp4Dj_tgSbU-zow==")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Check the status code.
+    let status = res.status();
+    if !status.is_success() {
+        let error_text = res.text().await.map_err(|e| e.to_string())?;
+        return Err(format!("HTTP {}: {}", status, error_text));
+    }
+
+    // Read the response as text.
+    let text = res.text().await.map_err(|e| e.to_string())?;
+    // Parse the response as JSON.
+    let json_value: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("JSON parse error: {}", e))?;
+
+    // Extract the "entities" array.
+    let entities = json_value
+        .get("entities")
+        .and_then(|v| v.as_array())
+        .ok_or("Missing or invalid 'entities' field")?;
+    
+    // Map each entity to extract its "MESSAGE" field.
+    let messages: Vec<String> = entities.iter().filter_map(|entity| {
+        entity.get("MESSAGE")?.as_str().map(|s| s.to_string())
+    }).collect();
+
+    // Return the messages as a JSON string.
+    serde_json::to_string(&messages).map_err(|e| e.to_string())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -310,7 +367,8 @@ pub fn run() {
             generate_custom_token,
             login_switch,
             logout_switch,
-            get_utilization
+            get_utilization,
+            get_event_logs
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");
