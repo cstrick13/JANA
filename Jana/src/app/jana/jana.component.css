@@ -38,6 +38,17 @@
   text-align: left;
 }
 
+.user-message {
+  background-color: #dcf8c6;  /* Light green */
+
+}
+
+/* AI messages: align to the left with standard white background */
+.ai-message {
+  background-color: #fff;
+ 
+}
+
 /***********************************************
   Chat Input Area
 ***********************************************/

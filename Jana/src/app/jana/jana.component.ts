@@ -46,7 +46,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
    * (For an extra visual "boost") 
    */
   private isShortClip = false;
-  public chatMessages: string[] = [];
+  public chatMessages: ChatMessage[] = [];
   public newChatMessage: string = '';
 
   ngOnInit() {
@@ -69,7 +69,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   }
   sendChatMessage() {
     if (this.newChatMessage.trim()) {
-      this.chatMessages.push(`You: ${this.newChatMessage}`);
+      this.chatMessages.push({ sender: 'user', content: this.newChatMessage });
       // Instead of simulating a response, call the agent:
       this.sendToAgent(this.newChatMessage);
       this.newChatMessage = '';
@@ -108,13 +108,13 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       });
       if (!agentResponse.ok) {
         console.error('Agent request failed', agentResponse.statusText);
-        this.chatMessages.push("Jana: Agent request failed.");
+        this.chatMessages.push({ sender: 'ai', content: "Jana: Agent request failed." });
         return;
       }
       const reader = agentResponse.body?.getReader();
       if (!reader) {
         console.error('No reader available for agentResponse');
-        this.chatMessages.push("Jana: No agent response available.");
+        this.chatMessages.push({ sender: 'ai', content: "Jana: No agent response available." });
         return;
       }
       const decoder = new TextDecoder();
@@ -147,10 +147,12 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       }
       
       console.log('Final agent reply:', finalReply);
-      this.chatMessages.push(`Jana: ${finalReply}`);
+      this.chatMessages.push({ sender: 'ai', content: finalReply });
+
     } catch (error) {
       console.error('Error sending chat to agent:', error);
-      this.chatMessages.push("Jana: Error processing your message.");
+      this.chatMessages.push({ sender: 'ai', content: "Error processing your message." });
+
     }
   }
   resetWizard() {
@@ -558,3 +560,8 @@ vec3 fade(vec3 t) {
 
 
 } // END of JanaComponent
+
+export interface ChatMessage {
+  sender: 'user' | 'ai';
+  content: string;
+}
