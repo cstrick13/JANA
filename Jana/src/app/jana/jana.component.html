@@ -10,20 +10,26 @@
 
   <!-- Fixed/Centered Input Bar -->
   <div class="chat-input-centered">
+    <!-- Full width text area -->
     <textarea
     [(ngModel)]="newChatMessage"
+    (keydown.enter)="handleEnter($event)"
+    (input)="adjustTextareaHeight($event)"
     placeholder="Ask Jana..."
     rows="1"
   ></textarea>
-    <div class="chatgpt-input-buttons">
+    
+    <!-- Icons container placed underneath the textarea -->
+    <div class="chat-input-icons">
       <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
         <i class="fa fa-microphone"></i>
       </button>
+      <button class="send-btn" (click)="sendChatMessage()">
+        <i class="fa fa-paper-plane"></i>
+      </button>
     </div>
-    <button class="send-btn" (click)="sendChatMessage()">
-      <i class="fa fa-paper-plane"></i>
-    </button>
   </div>
+  
 </div>
 
 
@@ -31,7 +37,7 @@
 
 <!-- Modal remains unchanged -->
 <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content custom-modal-content">
       
       <!-- Custom Header with "traffic lights" -->

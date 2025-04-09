@@ -75,6 +75,28 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       this.newChatMessage = '';
     }
   }
+
+  adjustTextareaHeight(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    // Reset the height to auto to correctly calculate new scrollHeight
+    textarea.style.height = 'auto';
+    // Set the textarea height to match its scrollHeight, ensuring it expands with the text
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+
+  handleEnter(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (!keyboardEvent.shiftKey) {
+      keyboardEvent.preventDefault(); // Prevent insertion of newline.
+      this.sendChatMessage();
+    }
+  }
+  
+  
+  
+
+  
   async sendToAgent(text: string) {
     try {
       const agentResponse = await fetch('http://localhost:8000/run_task', {
@@ -146,7 +168,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       canvas: this.canvasRef.nativeElement,
       antialias: true,
     });
-    this.renderer.setSize(800, 800);
+    this.renderer.setSize(400, 400);
     this.renderer.setClearColor(0x000000, 1); // Set clear color to black
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
