@@ -1,261 +1,32 @@
-import json
-import uuid
-import time
-from typing import List, Tuple
-import tempfile
-import re
-
 import RESTapi_CX as SwitchApi
-from command_reference import command_reference
-
-from autogen_core import (
-    FunctionCall,
-    MessageContext,
-    RoutedAgent,
-    SingleThreadedAgentRuntime,
-    TopicId,
-    TypeSubscription,
-    message_handler,
-    CancellationToken,
-)
-from autogen_core.models import (
-    AssistantMessage,
-    ChatCompletionClient,
-    FunctionExecutionResult,
-    FunctionExecutionResultMessage,
-    LLMMessage,
-    SystemMessage,
-    UserMessage,
-)
-from autogen_core.tools import FunctionTool, Tool
+from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.conditions import TextMentionTermination, StopMessageTermination
+from autogen_agentchat.messages import TextMessage
+from autogen_agentchat.ui import Console
+from autogen_agentchat.base import Response, TaskResult
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_core.code_executor import CodeBlock, CodeExecutor
-from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-
+from autogen_core import CancellationToken
+from command_reference import command_reference
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import asyncio
+import traceback
+import os
 
-FINAL_RESULT = ""
-
-
-class UserTask(BaseModel):
-    context: List[LLMMessage]
-
-
-class AgentResponse(BaseModel):
-    reply_to_topic: str
-    context: List[LLMMessage]
-
-
-class AIAgent(RoutedAgent):
-    def __init__(
-        self,
-        description: str,
-        system_message: SystemMessage,
-        model_client: ChatCompletionClient,
-        tools: List[Tool],
-        delegate_tools: List[Tool],
-        agent_topic_type: str,
-        user_topic_type: str,
-    ) -> None:
-        super().__init__(description)
-        self._system_message = system_message
-        self._model_client = model_client
-        self._tools = dict([(tool.name, tool) for tool in tools])
-        self._tool_schema = [tool.schema for tool in tools]
-        self._delegate_tools = dict([(tool.name, tool) for tool in delegate_tools])
-        self._delegate_tool_schema = [tool.schema for tool in delegate_tools]
-        self._agent_topic_type = agent_topic_type
-        self._user_topic_type = user_topic_type
-
-    @message_handler
-    async def handle_task(self, message: UserTask, ctx: MessageContext) -> None:
-        # Send the user's message to the llm
-        llm_result = await self._model_client.create(
-            messages=[self._system_message] + message.context,
-            tools=self._tool_schema + self._delegate_tool_schema,
-            cancellation_token=ctx.cancellation_token,
-        )
-        print(f"{'-' * 80}\n{self.id.type}:\n{llm_result.content}", flush=True)
-
-        # Process the llm's result
-        while isinstance(llm_result.content, list) and all(
-            isinstance(m, FunctionCall) for m in llm_result.content
-        ):
-            tool_call_results: List[FunctionExecutionResult] = []
-            delegate_targets: List[Tuple[str, UserTask]] = []
-            # Process each function call
-            for call in llm_result.content:
-                arguments = json.loads(call.arguments)  # Load the tool's args
-                if call.name in self._tools:
-                    # Execute the tool directly
-                    result = await self._tools[call.name].run_json(
-                        arguments, ctx.cancellation_token
-                    )
-                    result_as_str = self._tools[call.name].return_value_as_string(
-                        result
-                    )
-                    tool_call_results.append(
-                        FunctionExecutionResult(
-                            call_id=call.id,
-                            content=result_as_str,
-                            is_error=False,
-                            name=call.name,
-                        )
-                    )
-                elif call.name in self._delegate_tools:
-                    # Execute the tool to get the delegate agent's topic type
-                    result = await self._delegate_tools[call.name].run_json(
-                        arguments, ctx.cancellation_token
-                    )
-                    topic_type = self._delegate_tools[call.name].return_value_as_string(
-                        result
-                    )
-
-                    # Create the context for the delegate agent, including the function call and the result.
-                    delegate_messages = list(message.context) + [
-                        AssistantMessage(content=[call], source=self.id.type),
-                        FunctionExecutionResultMessage(
-                            content=[
-                                FunctionExecutionResult(
-                                    call_id=call.id,
-                                    content=f"transferred to {topic_type}. Adopt persona immediately.",
-                                    is_error=False,
-                                    name=call.name,
-                                )
-                            ]
-                        ),
-                    ]
-                    delegate_targets.append(
-                        (topic_type, UserTask(context=delegate_messages))
-                    )
-                else:
-                    raise ValueError(f"Unknown tool: {call.name}")
-            if len(delegate_targets) > 0:
-                # Delegate the task to other agents by publishing the messages to the topics
-                for topic_type, task in delegate_targets:
-                    print(
-                        f"{'-' * 80}\n{self.id.type}:\nDelegating to {topic_type}",
-                        flush=True,
-                    )
-                    await self.publish_message(
-                        task, topic_id=TopicId(topic_type, self.id.key)
-                    )
-            if len(tool_call_results) > 0:
-                print(f"{'-' * 80}\n{self.id.type}:\n{tool_call_results}", flush=True)
-                # Make another LLM call with the results.
-                message.context.extend(
-                    [
-                        AssistantMessage(
-                            content=llm_result.content, source=self.id.type
-                        ),
-                        FunctionExecutionResultMessage(content=tool_call_results),
-                    ]
-                )
-                llm_result = await self._model_client.create(
-                    messages=[self._system_message] + message.context,
-                    tools=self._tool_schema + self._delegate_tool_schema,
-                    cancellation_token=ctx.cancellation_token,
-                )
-                print(
-                    f"{'-' * 80}\n{self.id.type}(llm call with results):\n{llm_result.content}",
-                    flush=True,
-                )
-            else:
-                return
-
-        # Begin self-reflection loop
-        max_reflections = 5
-        for i in range(max_reflections):
-            reflection_prompt = SystemMessage(
-                content="""
-            You are reflecting on the result you generated in response to the user's request.
-
-            1. **Assess the Output**:
-            • Did the result fully and correctly solve the user's original task?
-            • Is anything missing, ambiguous, or incorrect?
-
-            2. **If the output is correct and complete**:
-            • Reply only with: "The output is satisfactory."
-
-            3. **If the output is incomplete or incorrect**:
-            • Identify exactly what went wrong or what is missing.
-            • Plan a corrected or improved solution step-by-step.
-            • Retry solving the problem by generating a new solution that addresses the issue.
-
-            Always aim to deliver a working, accurate, and complete result that meets the user's intent.
-            """
-            )
-            reflection_result = await self._model_client.create(
-                messages=[self._system_message, reflection_prompt]
-                + message.context
-                + [AssistantMessage(content=llm_result.content, source=self.id.type)],
-                tools=self._tool_schema + self._delegate_tool_schema,
-                cancellation_token=ctx.cancellation_token,
-            )
-            print(
-                f"{'=' * 80}\n{self.id.type}(reflection iteration {i + 1}):\n{reflection_result.content}",
-                flush=True,
-            )
-            reflected_output = (
-                reflection_result.content
-                if isinstance(reflection_result.content, str)
-                else "\n".join(str(item) for item in reflection_result.content)
-            )
-
-            if reflected_output.strip().lower() == "the output is satisfactory.":
-                break
-            else:
-                llm_result.content = reflected_output
-                message.context.append(
-                    AssistantMessage(
-                        content=f"Reflection iteration {i + 1}: {reflected_output}",
-                        source=self.id.type,
-                    )
-                )
-        # End self-reflection loop
-
-        # The tasks have been completed, publish the final result
-        assert isinstance(llm_result.content, str)
-        message.context.append(
-            AssistantMessage(content=llm_result.content, source=self.id.type)
-        )
-        global FINAL_RESULT
-        FINAL_RESULT = llm_result.content
-
-        # await self.publish_message(
-        #     AgentResponse(context=message.context, reply_to_topic=self._agent_topic_type),
-        #     topic_id=TopicId(self._user_topic_type, source=self.id.key)
-        # )
-
-
-class UserAgent(RoutedAgent):
-    def __init__(self, description: str, user_topic_type: str, agent_topic_type: str):
-        super().__init__(description)
-        self._user_topic_type = user_topic_type
-        self._agent_topic_type = agent_topic_type
-
-    @message_handler
-    async def handle_task_result(
-        self, message: AgentResponse, ctx: MessageContext
-    ) -> None:
-        # user_input = input(f"{"-"*80}\nUser (Type 'exit' to exit the session): ")
-
-        # if user_input.strip().lower() == "exit":
-        #     print(f"{'-'*80}\nThe user has ended the session")
-        #     return
-        # message.context.append(UserMessage(content=user_input, source="User"))
-        await self.publish_message(
-            UserTask(context=message.context),
-            topic_id=TopicId(self._agent_topic_type, source=self.id.key),
-        )
-
+# Load environment variables from .env
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 8000))
 
 DEFAULT_SWITCH_IP = "10.0.150.150"
-DEFAULT_USERNAME = "admin"
-DEFAULT_PASSWORD = ""
+DEFAULT_USERNAME = "jana"
+DEFAULT_PASSWORD = "password"
 
 SESSION_COOKIE: any
-
 
 # Function Tools
 def log_into_switch():
@@ -268,25 +39,11 @@ def log_into_switch():
     SESSION_COOKIE = result
     return result
 
-
-log_into_switch_tool = FunctionTool(
-    log_into_switch,
-    description="Logs into the switch and saves the session cookie. MUST be called before any other switch action.",
-)
-
-
 def log_out_switch():
     result = SwitchApi.logout_from_switch(
         switch_ip=DEFAULT_SWITCH_IP, session=SESSION_COOKIE
     )
     return result
-
-
-log_out_switch_tool = FunctionTool(
-    log_out_switch,
-    description="Logs out of the switch. MUST be called after all switch actions are finished.",
-)
-
 
 def execute_http_command(command: str):
     result = SwitchApi.cli_command(
@@ -295,185 +52,86 @@ def execute_http_command(command: str):
     return result
 
 
-execute_http_command_tool = FunctionTool(
-    execute_http_command,
-    description="Write a custom command for the switch to be executed via http. Use given command reference to write commands.",
-)
-
 def execute_ssh_command(command: str):
     result = SwitchApi.ssh_command(
         switch_ip=DEFAULT_SWITCH_IP, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD, command=command
     )
     return result
-execute_ssh_command_tool = FunctionTool(
-    execute_ssh_command,
-    description="Write a custom command for the switch to be executed via ssh. use prior knowledge to write commands."
+
+# Define System prompts
+switch_admin_prompt = f"""
+    You are a network administrator for an Aruba 6300X switch. You can interact with the switch using either HTTP API commands or SSH commands.
+
+    You have access to three tools:
+    • `log_into_switch` — Logs into the switch (required before any command execution)
+    • `log_out_switch` — Logs out of the switch (required after all command execution)
+    • `execute_http_command` — Sends an HTTP-based CLI command to the switch
+    • `execute_ssh_command` - Sends a command to the switch using ssh
+
+    ====================
+    🔧 Command Guidelines:
+    ====================
+
+    1. **Authentication**
+    • You MUST call `log_into_switch` before running any of the http commands
+    • You MUST call `log_out_switch` after all http commands are complete
+    • You MUST use the `config` command before making and changes to the switch via ssh
+
+    2. **Command Type Decision**
+    • Use **HTTP CLI commands** (via `execute_http_command`) if:
+        – You only need to *retrieve information*
+        – No configuration or persistent change is required
+        – They are available in the provided command reference below
+
+    • Use **SSH commands** if:
+        – You need to *modify* switch settings or make configuration changes
+        – The required operation is not supported via HTTP
+        – You are restoring settings, enabling/disabling ports, updating VLANs, etc.
+
+    3. **Command Reference**
+    • The following CLI commands are available over HTTP only:
+    {command_reference}
+
+    • These HTTP commands are *read-only*. They cannot modify switch configuration.
+    • For the ssh commands, write the ssh commands as bash in a single line as follows:
+        `
+        config\\n {{command}}
+        `
+        (Note: For changes to be made, you MUST be in config mode)
+        - Commands must be acceptable for an Aruba 6300CX switch, or they will fail
+
+    4. **Blacklisted ssh commands**
+    • The following ssh commands are NOT to be exucuted no matter what.
+        - 'ip address'
+
+    5. **Fallback to SSH**
+    • If a task cannot be completed with the available HTTP commands, fall back to SSH using your networking expertise.
+
+    ====================
+    🏁 Goal:
+    ====================
+    Safely and efficiently complete the user's task by choosing the correct method (HTTP or SSH) based on whether the task requires retrieving information or modifying the switch.
+    Your final response should include the answer to the user's question, or what you found, with a 'brief' description of what you did, followed by 'FINISHED'. Do this after logging out of the switch and all tasks have finished.
+        - Make sure that the output is in plain text without any sort of format. The final response will be shown in a plain text file.
+"""
+model_client = OpenAIChatCompletionClient(
+    model="gpt-4o-mini", api_key=OPENAI_API_KEY
 )
 
-
-user_agent_topic_type = "UserAgent"
-manager_agent_topic_type = "ManagerAgent"
-switch_admin_agent_topic_type = "SwitchAdminAgent"
-
-user_topic_type = "User"
-
-
-# Delegate Tool
-def delegate_to_switch_admin():
-    return switch_admin_agent_topic_type
-
-
-delegate_to_switch_admin_tool = FunctionTool(
-    delegate_to_switch_admin, description="Use for anything related to a switch"
+switch_admin = AssistantAgent(
+    name="SwitchAdmin",
+    model_client=model_client,
+    tools=[log_into_switch, log_out_switch, execute_http_command, execute_ssh_command],
+    system_message=switch_admin_prompt,
+    reflect_on_tool_use=True
 )
 
+termination_condition = TextMentionTermination("FINISHED")
 
-async def create_runtime():
-    runtime = SingleThreadedAgentRuntime()
-
-    model_client = OpenAIChatCompletionClient(
-        model="gpt-4o-mini", api_key=OPENAI_API_KEY
-    )
-
-    user_agent = await UserAgent.register(
-        runtime,
-        type=user_agent_topic_type,
-        factory=lambda: UserAgent(
-            description="Agent to handle the interaction with the user",
-            user_topic_type=user_topic_type,
-            agent_topic_type=switch_admin_agent_topic_type,
-        ),
-    )
-
-    # manager_agent = await AIAgent.register(
-    #     runtime,
-    #     type=manager_agent_topic_type,
-    #     factory=lambda: AIAgent(
-    #         "The manager of a team of agents.",
-    #         system_message=SystemMessage(content="""
-    #             You are the manager of a networking team.
-    #             Your main job is to delegate each task to only one team member based on the best fit. Do NOT assign a task to multiple members.
-
-    #             Your team members are:
-    #                 •	Switch admin: Handles ALL tasks related to networking with a switch.
-
-    #             Rules:
-    #                 1.	Assign exactly one team member per task. Do not delegate the same task to both members.
-    #                 2.	If a task involves both switching and coding, prioritize the most relevant aspect and assign it to the best fit.
-    #                 3.	Once the selected member completes their task, summarize their results in a short and concise manner, ensuring it is relevant to the user’s request.
-    #                 4.  DO NOT RESPOND TO THE USER DIRECTLY. The delegates are experts who can help the user more than you can.
-    #         """),
-    #         model_client=model_client,
-    #         tools=[],
-    #         delegate_tools=[delegate_to_switch_admin_tool],
-    #         agent_topic_type=manager_agent_topic_type,
-    #         user_topic_type=user_topic_type,
-    #     ),
-    # )
-
-    switch_agent = await AIAgent.register(
-        runtime,
-        type=switch_admin_agent_topic_type,
-        factory=lambda: AIAgent(
-            "The switch admin that manages a physical switch",
-            system_message=SystemMessage(
-                content=f"""
-                    You are a network administrator for an Aruba 6300X switch. You can interact with the switch using either HTTP API commands or SSH commands.
-
-                    You have access to three tools:
-                    • `log_into_switch` — Logs into the switch (required before any command execution)
-                    • `log_out_switch` — Logs out of the switch (required after all command execution)
-                    • `execute_http_command` — Sends an HTTP-based CLI command to the switch
-                    • `execute_ssh_command` - Sends a command to the switch using ssh
-
-                    ====================
-                    🔧 Command Guidelines:
-                    ====================
-
-                    1. **Authentication**
-                    • You MUST call `log_into_switch` before running any of the http commands
-                    • You MUST call `log_out_switch` after all http commands are complete
-                    • You MUST use the `config` command before making and changes to the switch via ssh
-
-                    2. **Command Type Decision**
-                    • Use **HTTP CLI commands** (via `execute_http_command`) if:
-                        – You only need to *retrieve information*
-                        – No configuration or persistent change is required
-                        – They are available in the provided command reference below
-
-                    • Use **SSH commands** if:
-                        – You need to *modify* switch settings or make configuration changes
-                        – The required operation is not supported via HTTP
-                        – You are restoring settings, enabling/disabling ports, updating VLANs, etc.
-
-                    3. **Command Reference**
-                    • The following CLI commands are available over HTTP only:
-                    {command_reference}
-
-                    • These HTTP commands are *read-only*. They cannot modify switch configuration.
-                    • For the ssh commands, write the ssh commands in bash, wrapping the commands in `EOF` as follows:
-                        `
-                        config\\n {{command}}
-                        `
-                    
-                    4. **Blacklisted ssh commands**
-                    • The following ssh commands are NOT to be exucuted no matter what.
-                        - 'ip address'
-
-                    5. **Fallback to SSH**
-                    • If a task cannot be completed with the available HTTP commands, fall back to SSH using your networking expertise.
-
-                    ====================
-                    🏁 Goal:
-                    ====================
-                    Safely and efficiently complete the user's task by choosing the correct method (HTTP or SSH) based on whether the task requires retrieving information or modifying the switch.
-                    """
-            ),
-            model_client=model_client,
-            tools=[
-                execute_http_command_tool,
-                execute_ssh_command_tool,
-                log_into_switch_tool,
-                log_out_switch_tool,
-            ],
-            delegate_tools=[],
-            agent_topic_type=switch_admin_agent_topic_type,
-            user_topic_type=user_topic_type,
-        ),
-    )
-
-    # The user agent will recieve messages to its type only
-    await runtime.add_subscription(TypeSubscription(user_topic_type, user_agent.type))
-
-    # The manager agent will recieve messages to its type only
-    # await runtime.add_subscription(TypeSubscription(manager_agent_topic_type, manager_agent.type))
-
-    # The switch agent will recieve messages to its type only
-    await runtime.add_subscription(
-        TypeSubscription(switch_admin_agent_topic_type, switch_agent.type)
-    )
-
-    return runtime
-
-
-import os
-import json
-import asyncio
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from dotenv import load_dotenv
-from pydantic import BaseModel
-
-# Load environment variables from .env
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", 8000))
-
-# Assume create_team() is defined/imported from your project
-# For example:
-# from your_team_module import create_team
+team = RoundRobinGroupChat(
+    [switch_admin],
+    termination_condition=termination_condition,
+)
 
 # Create the FastAPI app
 app = FastAPI()
@@ -495,31 +153,28 @@ async def index():
 class TaskRequest(BaseModel):
     task: str
 
+async def process_streamed_messages(task: str) -> str:
+    final_content = None
+    # Run the team with a task and print the messages to the console.
+    async for message in team.run_stream(task=task):
+        if isinstance(message, TaskResult):
+            return message.messages[-1].content.replace("FINISHED", "")
+        print(f"{'-'*20}{type(message).__name__}{'-'*20}\n{message.content}\n")
+        final_content=message
+    
+    return final_content
 
 @app.post("/run_task")
 async def run_task_route(task_request: TaskRequest):
-    agent_runtime = await create_runtime()
 
     task = task_request.task
     print(f"Running task: {task}")
 
     if not task:
         raise HTTPException(status_code=400, detail="No task provided")
-    print(agent_runtime)
-    agent_runtime.start()
-    ssid = str(uuid.uuid4())
-    user_input = task
-    await agent_runtime.publish_message(
-        AgentResponse(
-            context=[UserMessage(content=user_input, source="User")],
-            reply_to_topic=user_topic_type,
-        ),
-        topic_id=TopicId(user_topic_type, ssid),
-    )
-
-    await agent_runtime.stop_when_idle()
-    print(FINAL_RESULT)
-    return FINAL_RESULT
+    
+    final_content = await process_streamed_messages(task)
+    return final_content
 
 
 if __name__ == "__main__":
