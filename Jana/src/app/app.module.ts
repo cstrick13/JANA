@@ -33,6 +33,7 @@ import { AnalyticsComponent } from './analytics/analytics.component';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule     } from '@angular/material/input';
+import { MarkdownModule } from 'ngx-markdown';
 
 
 
@@ -90,7 +91,9 @@ import { HomeComponent } from './home/home.component';
       closeButton: true, // add a close button for user to dismiss manually if needed
       tapToDismiss: false
     }),
+    MarkdownModule.forRoot(),
     SweetAlert2Module.forRoot(),
+    
   ],
   providers: [
     provideHttpClient(withFetch()),

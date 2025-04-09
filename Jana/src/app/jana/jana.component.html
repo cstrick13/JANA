@@ -4,11 +4,12 @@
   <!-- Scrollable messages area -->
   <div class="chat-messages-container">
     <div *ngFor="let msg of chatMessages" 
-         class="chat-message" 
-         [ngClass]="{'user-message': msg.sender === 'user', 'ai-message': msg.sender === 'ai'}">
-      {{ msg.content }}
-    </div>
-  </div>
+     class="chat-message" 
+     [ngClass]="{'user-message': msg.sender === 'user', 'ai-message': msg.sender === 'ai'}"
+     [innerHTML]="msg.content">
+</div>
+
+</div>
   
 
   <!-- Fixed/Centered Input Bar -->

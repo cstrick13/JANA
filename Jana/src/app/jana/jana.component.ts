@@ -92,7 +92,28 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       this.sendChatMessage();
     }
   }
+  private processMarkdown(text: string): string {
+    // Replace escaped newline characters with actual newlines (if needed)
+    let processedText = text.replace(/\\n/g, "\n");
   
+    // Replace newlines with <br> tags to create HTML line breaks.
+    processedText = processedText.replace(/\n/g, "<br>");
+  
+    // Convert headings (for h1, h2, h3)
+    processedText = processedText.replace(/^###(.*)$/gm, "<h3>$1</h3>");
+    processedText = processedText.replace(/^##(.*)$/gm, "<h2>$1</h2>");
+    processedText = processedText.replace(/^#(.*)$/gm, "<h1>$1</h1>");
+  
+    // Convert **bold** text to <strong>
+    processedText = processedText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  
+    // Convert *italic* text to <em>
+    processedText = processedText.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  
+    // You can add more replacements for additional markdown elements as needed.
+    
+    return processedText;
+  }
   
   
 
@@ -124,37 +145,24 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         if (done) break;
         const chunkText = decoder.decode(value, { stream: true });
         console.log('SSE chunk from agent:', chunkText);
-        const lines = chunkText.split('\n');
-        finalReply = chunkText
-        // for (const line of lines) {
-        //   if (line.startsWith('data: ')) {
-        //     const jsonStr = line.slice('data: '.length).trim();
-        //     try {
-        //       const message = JSON.parse(jsonStr);
-        //       if (message.type === 'Result') {
-        //         finalReply = message.message;
-        //       }
-        //       if (message.status === 'completed') {
-        //         console.log('SSE stream completed');
-        //         await reader.cancel();
-        //         break;
-        //       }
-        //     } catch (err) {
-        //       console.error('Error parsing SSE chunk:', err);
-        //     }
-        //   }
-        // }
+        finalReply = chunkText;
+        // Optionally, you can accumulate text from multiple chunks if needed.
       }
       
       console.log('Final agent reply:', finalReply);
-      this.chatMessages.push({ sender: 'ai', content: finalReply });
-
+      
+      // Manually process markdown to convert it to HTML.
+      const processedHtml = this.processMarkdown(finalReply);
+      
+      // Push the resulting HTML to your chat messages.
+      this.chatMessages.push({ sender: 'ai', content: processedHtml });
+  
     } catch (error) {
       console.error('Error sending chat to agent:', error);
       this.chatMessages.push({ sender: 'ai', content: "Error processing your message." });
-
     }
   }
+  
   resetWizard() {
     // Set wizardFinished to false
     this.wizardConfigService.wizardFinished = false;
