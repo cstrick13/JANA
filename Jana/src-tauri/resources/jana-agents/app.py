@@ -6,7 +6,7 @@ import tempfile
 import re
 
 import RESTapi_CX as SwitchApi
-from command_reference import command_reference
+from command_reference import http_command_reference, ssh_command_reference
 
 from autogen_core import (
     FunctionCall,
@@ -163,56 +163,6 @@ class AIAgent(RoutedAgent):
             else:
                 return
 
-        # Begin self-reflection loop
-        max_reflections = 5
-        for i in range(max_reflections):
-            reflection_prompt = SystemMessage(
-                content="""
-            You are reflecting on the result you generated in response to the user's request.
-
-            1. **Assess the Output**:
-            • Did the result fully and correctly solve the user's original task?
-            • Is anything missing, ambiguous, or incorrect?
-
-            2. **If the output is correct and complete**:
-            • Reply only with: "The output is satisfactory."
-
-            3. **If the output is incomplete or incorrect**:
-            • Identify exactly what went wrong or what is missing.
-            • Plan a corrected or improved solution step-by-step.
-            • Retry solving the problem by generating a new solution that addresses the issue.
-
-            Always aim to deliver a working, accurate, and complete result that meets the user's intent.
-            """
-            )
-            reflection_result = await self._model_client.create(
-                messages=[self._system_message, reflection_prompt]
-                + message.context
-                + [AssistantMessage(content=llm_result.content, source=self.id.type)],
-                tools=self._tool_schema + self._delegate_tool_schema,
-                cancellation_token=ctx.cancellation_token,
-            )
-            print(
-                f"{'=' * 80}\n{self.id.type}(reflection iteration {i + 1}):\n{reflection_result.content}",
-                flush=True,
-            )
-            reflected_output = (
-                reflection_result.content
-                if isinstance(reflection_result.content, str)
-                else "\n".join(str(item) for item in reflection_result.content)
-            )
-
-            if reflected_output.strip().lower() == "the output is satisfactory.":
-                break
-            else:
-                llm_result.content = reflected_output
-                message.context.append(
-                    AssistantMessage(
-                        content=f"Reflection iteration {i + 1}: {reflected_output}",
-                        source=self.id.type,
-                    )
-                )
-        # End self-reflection loop
 
         # The tasks have been completed, publish the final result
         assert isinstance(llm_result.content, str)
@@ -378,56 +328,103 @@ async def create_runtime():
             "The switch admin that manages a physical switch",
             system_message=SystemMessage(
                 content=f"""
-                    You are a network administrator for an Aruba 6300X switch. You can interact with the switch using either HTTP API commands or SSH commands.
+                You are a network administrator for an Aruba 6300X switch. You can interact with the switch using either HTTP API commands or SSH commands.
 
-                    You have access to three tools:
-                    • `log_into_switch` — Logs into the switch (required before any command execution)
-                    • `log_out_switch` — Logs out of the switch (required after all command execution)
-                    • `execute_http_command` — Sends an HTTP-based CLI command to the switch
-                    • `execute_ssh_command` - Sends a command to the switch using ssh
+                You have access to four tools:
+                • `log_into_switch` — Logs into the switch (required before any command execution)
+                • `log_out_switch` — Logs out of the switch (required after all command execution)
+                • `execute_http_command` — Sends an HTTP-based CLI command to the switch
+                • `execute_ssh_command` — Sends a command to the switch using ssh
 
-                    ====================
-                    🔧 Command Guidelines:
-                    ====================
+                ====================
+                🔧 Command Guidelines:
+                ====================
 
-                    1. **Authentication**
-                    • You MUST call `log_into_switch` before running any of the http commands
-                    • You MUST call `log_out_switch` after all http commands are complete
-                    • You MUST use the `config` command before making and changes to the switch via ssh
+                1. **Authentication**
+                • You MUST call `log_into_switch` before running any of the http commands  
+                • You MUST call `log_out_switch` after all http commands are complete  
+                • You MUST use the `config` command before making any changes to the switch via ssh  
 
-                    2. **Command Type Decision**
-                    • Use **HTTP CLI commands** (via `execute_http_command`) if:
-                        – You only need to *retrieve information*
-                        – No configuration or persistent change is required
-                        – They are available in the provided command reference below
+                2. **Command Type Decision**
+                • Use **HTTP CLI commands** (via `execute_http_command`) if:  
+                    – You only need to *retrieve information*  
+                    – No configuration or persistent change is required  
+                    – They are available in the provided command reference below  
 
-                    • Use **SSH commands** if:
-                        – You need to *modify* switch settings or make configuration changes
-                        – The required operation is not supported via HTTP
-                        – You are restoring settings, enabling/disabling ports, updating VLANs, etc.
+                • Use **SSH commands** if:  
+                    – You need to *modify* switch settings or make configuration changes  
+                    – The required operation is not supported via HTTP  
+                    – You are restoring settings, enabling/disabling ports, updating VLANs, etc.  
 
-                    3. **Command Reference**
-                    • The following CLI commands are available over HTTP only:
-                    {command_reference}
+                3. **Command Reference**
+                • The following CLI commands are available over HTTP only:  
+                {http_command_reference}  
+                • These HTTP commands are *read-only*. They cannot modify switch configuration.  
+                • If a command is not listed above, it is not supported via HTTP and should be executed using SSH instead.
 
-                    • These HTTP commands are *read-only*. They cannot modify switch configuration.
-                    • For the ssh commands, write the ssh commands in bash, wrapping the commands in `EOF` as follows:
-                        `
-                        config\\n {{command}}
-                        `
-                    
-                    4. **Blacklisted ssh commands**
-                    • The following ssh commands are NOT to be exucuted no matter what.
-                        - 'ip address'
+                • For ssh commands, write them in bash-style format:  
+                    `config\\n {{command}}`
 
-                    5. **Fallback to SSH**
-                    • If a task cannot be completed with the available HTTP commands, fall back to SSH using your networking expertise.
+                • Example ssh commands:  
+                    {ssh_command_reference}
+                    (Note: ping can only be executed via ssh)
 
-                    ====================
-                    🏁 Goal:
-                    ====================
-                    Safely and efficiently complete the user's task by choosing the correct method (HTTP or SSH) based on whether the task requires retrieving information or modifying the switch.
-                    """
+                4. **Blacklisted ssh commands**
+                • DO NOT execute the following commands:  
+                    - 'ip address'
+
+                ====================
+                🧠 Troubleshooting Strategy:
+                ====================
+
+                When a user reports a networking issue (e.g., cannot access a specific website or service), follow this structured diagnostic process:
+
+                1. **Clarify the Symptom**  
+                - Identify exactly what is failing (e.g., ping, DNS, HTTP, site-specific access).
+                - Determine if the issue is global or limited to a specific domain, device, or service.
+
+                2. **Diagnose Broadly**  
+                - Check general switch health (temperature, interfaces, CPU, power).
+                - Gather interface status, port statistics, and error rates.
+                - Check DNS configuration, time synchronization, routing tables, VLAN config, and access control lists.
+                - Attempt relevant tests (e.g., `ping`, `traceroute`, DNS lookups, HTTP connectivity).
+
+                3. **Validate Assumptions**  
+                - Do not assume that a configuration is correct just because it exists.
+                    - Example: A DNS server may resolve some domains but block others.
+                    - Example: An interface may be “up” but experience high packet loss.
+                - Cross-validate configurations by running live tests (ping specific domains, test DNS per server, verify interface counters over time).
+
+                4. **Isolate the Problem**  
+                - Narrow down whether the issue lies in:
+                    - DNS resolution
+                    - Routing / gateway
+                    - Firewall or ACLs
+                    - Interface misconfiguration or physical link issues
+                    - External network (ISP or destination server)
+
+                5. **Fix Strategically**  
+                - Propose fixes based on confirmed issues (not assumptions).
+                - Prefer minimal and reversible changes (e.g., remove a problematic DNS server rather than resetting all settings).
+                - After applying a fix, **validate it** by re-running the original test.
+
+                6. **Summarize**  
+                - Clearly explain what was changed, why, and what the results were.
+                - If no fix is possible within switch scope, suggest next steps (e.g., check router/firewall/ISP).
+
+                ---
+
+                ### ✅ Summary Goals:
+                - Avoid shallow fixes. Always verify that the underlying cause is addressed.
+                - Consider uncommon failure modes (e.g., partial DNS blocking, asymmetric routing, low MTU, or misconfigured VLANs).
+                - Strive for precision and transparency. Always test, verify, and summarize results.
+
+                ====================
+                🏁 Goal:
+                ====================
+
+                Fix the user’s networking issue confidently and clearly, choosing the correct tool (HTTP or SSH) and validating every step. After the fix, clearly summarize the steps taken and results.
+                """
             ),
             model_client=model_client,
             tools=[
@@ -471,6 +468,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", 8000))
 
+previous_response: List[LLMMessage] = []
+
 # Assume create_team() is defined/imported from your project
 # For example:
 # from your_team_module import create_team
@@ -498,6 +497,7 @@ class TaskRequest(BaseModel):
 
 @app.post("/run_task")
 async def run_task_route(task_request: TaskRequest):
+    global previous_response
     agent_runtime = await create_runtime()
 
     task = task_request.task
@@ -511,14 +511,14 @@ async def run_task_route(task_request: TaskRequest):
     user_input = task
     await agent_runtime.publish_message(
         AgentResponse(
-            context=[UserMessage(content=user_input, source="User")],
+            context=previous_response + [UserMessage(content=user_input, source="User")],
             reply_to_topic=user_topic_type,
         ),
         topic_id=TopicId(user_topic_type, ssid),
     )
 
     await agent_runtime.stop_when_idle()
-    print(FINAL_RESULT)
+    previous_response.append(AssistantMessage(content=FINAL_RESULT, source=switch_admin_agent_topic_type))
     return FINAL_RESULT
 
 
