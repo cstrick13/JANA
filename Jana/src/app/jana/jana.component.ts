@@ -147,11 +147,9 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       antialias: true,
     });
     this.renderer.setSize(800, 800);
-    this.renderer.setClearColor(0xdad2d2, 1);
-  
-    // 2) Create Scene
+    this.renderer.setClearColor(0x000000, 1); // Set clear color to black
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xdad2d2); ;
+    this.scene.background = new THREE.Color(0x000000);
   
     // 3) Create Camera
     this.camera = new THREE.PerspectiveCamera(45,1, 0.1, 1000);
@@ -532,6 +530,8 @@ vec3 fade(vec3 t) {
 
     this.mediaRecorder = null;
 }
+
+
 
 
 
