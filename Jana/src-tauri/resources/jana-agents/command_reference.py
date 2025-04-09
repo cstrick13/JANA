@@ -1,4 +1,4 @@
-command_reference = """
+http_command_reference = """
 # 📘 Command: `show boot-history`
 
 Displays the boot history of the management module on the Aruba CX switch.
@@ -545,4 +545,99 @@ This command provides information about:
 - **Static mode** indicates DNS servers were manually configured.
 - No custom **host-to-IP mappings** are present at the time of this command output.
 - VRF `default` is being used, which means DNS lookups occur in the main routing table.
+"""
+
+ssh_command_reference = """
+# Switch Functions
+
+## Change DNS
+
+#### User
+> config  
+> ip dns server-address [SERVER-ADDRESS]  
+> write memory
+
+#### JANA
+> config/nip dns server-address [SERVER-ADDRESS]/nwrite memory
+
+#### Use Case
+- Changing the DNS server address is necessary when the network's DNS provider changes, or when switching to a custom DNS server for improved performance, security, or content filtering.
+- This command is useful for troubleshooting DNS-related issues by temporarily pointing to a different DNS server.
+- It can also be used to enforce organizational policies by redirecting DNS queries to a specific server for monitoring or compliance purposes.
+- In disaster recovery scenarios, this command allows quick redirection to backup DNS servers to maintain network functionality.
+
+#### Example AI Workflow
+Question: "I am connected to the internet but I cannot connect to Nintendo's website. Can you fix this and show me what you did?"
+
+> ssh admin@10.0.150.150
+> ping www.nintendo.com
+
+PING www.nintendo.com (127.0.0.1) 100(128) bytes of data.
+108 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.035 ms
+108 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.051 ms
+108 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.054 ms
+108 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.052 ms
+108 bytes from 127.0.0.1: icmp_seq=5 ttl=64 time=0.057 ms
+
+--- www.nintendo.com ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4079ms
+rtt min/avg/max/mdev = 0.035/0.049/0.057/0.007 ms
+
+> show ip dns
+
+VRF Name : default
+Mode : static
+Name Server(s) : 207.246.121.77, 8.8.8.8, 1.1.1.1
+
+Host configuration: Active
+Host Name                                                        Address
+
+> config
+> no ip dns server-address 207.246.121.77
+> no ip dns server-address 8.8.8.8
+> no ip dns server-address 1.1.1.1
+> ip dns server-address 8.8.8.8
+> ping www.nintendo.com
+
+PING nintendo.map.fastly.net (151.101.1.55) 100(128) bytes of data.
+108 bytes from 151.101.1.55: icmp_seq=1 ttl=59 time=17.6 ms
+108 bytes from 151.101.1.55: icmp_seq=2 ttl=59 time=16.6 ms
+108 bytes from 151.101.1.55: icmp_seq=3 ttl=59 time=25.6 ms
+108 bytes from 151.101.1.55: icmp_seq=4 ttl=59 time=17.0 ms
+108 bytes from 151.101.1.55: icmp_seq=5 ttl=59 time=19.9 ms
+
+--- nintendo.map.fastly.net ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4000ms
+rtt min/avg/max/mdev = 16.620/19.337/25.555/3.310 ms
+
+ > write memory
+
+## Ping a Host
+
+#### User
+> ping [HOSTNAME or IP]
+
+#### JANA
+> ping/[HOSTNAME or IP]
+
+#### Use Case
+- Used to verify network connectivity between the switch and a target host.
+- Helps diagnose basic network issues such as unreachable destinations, DNS resolution failures, or routing problems.
+- Can be used to test response time (latency) and packet loss between the switch and the destination.
+- Common in troubleshooting scenarios, such as confirming internet access or connectivity to internal servers.
+
+#### Example AI Workflow
+Question: "Can you check if we can reach Google's DNS?"
+
+> ssh admin@10.0.150.150  
+> ping 8.8.8.8
+
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.  
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=118 time=14.1 ms  
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=118 time=13.8 ms  
+64 bytes from 8.8.8.8: icmp_seq=3 ttl=118 time=14.0 ms  
+
+--- 8.8.8.8 ping statistics ---  
+3 packets transmitted, 3 received, 0% packet loss, time 2002ms  
+rtt min/avg/max/mdev = 13.834/13.994/14.112/0.115 ms
 """
