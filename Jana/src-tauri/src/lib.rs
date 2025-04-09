@@ -14,6 +14,19 @@ use dotenv::dotenv;
 use std::time::Duration;
 
 
+use tokio::sync::Mutex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref SESSION_CLIENT: Mutex<Option<Client>> = Mutex::new(None);
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FilteredUtilization {
+    cpu: u32,
+    memory: u32,
+}
+
 // Load environment variables from the .env file
 fn init_dotenv() {
     dotenv::dotenv().ok();
@@ -158,8 +171,17 @@ fn start_docker_compose(app_handle: &AppHandle) -> std::io::Result<Child> {
 
 #[tauri::command]
 async fn login_switch(username: String, password: String, ip: String) -> Result<String, String> {
+    // Check if a session already exists and early return if it does.
+    {
+        let session = SESSION_CLIENT.lock().await;
+        if session.is_some() {
+            return Ok("Already logged in".to_string());
+        }
+    }
+
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true) // 👈 Accept invalid certs (DEV ONLY!)
+        .cookie_store(true) // Enable cookie storage
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -178,16 +200,96 @@ async fn login_switch(username: String, password: String, ip: String) -> Result<
         .map_err(|e| e.to_string())?;
 
     let status = res.status();
+    let body = res.text().await.map_err(|e| e.to_string())?;
+
+    if status.is_success() {
+        let mut session = SESSION_CLIENT.lock().await;
+        *session = Some(client);
+        Ok(body)
+    } else {
+        Err(format!("HTTP {}: {}", status, body))
+    }
+}
+
+#[tauri::command]
+async fn logout_switch(ip: String) -> Result<String, String> {
+    let client = {
+        let session = SESSION_CLIENT.lock().await;
+        session.clone().ok_or("No active session found")?
+    };
+
+    let url = format!("https://{}/rest/v10.12/logout", ip); // Adjust endpoint if needed
+
+    let res = client
+        .post(&url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
     let text = res.text().await.map_err(|e| e.to_string())?;
 
     if status.is_success() {
+        let mut session = SESSION_CLIENT.lock().await;
+        *session = None;
         Ok(text)
     } else {
         Err(format!("HTTP {}: {}", status, text))
     }
 }
 
+#[tauri::command]
+async fn get_utilization(ip: String) -> Result<String, String> {
+    // Get the existing session client with cookies already stored.
+    let client = {
+        let session = SESSION_CLIENT.lock().await;
+        session.clone().ok_or("Not logged in")?
+    };
 
+    // Construct the URL (adjust if needed)
+    let url = format!(
+        "https://{}/rest/v10.12/system/subsystems/management_module,1%2F1",
+        ip
+    );
+
+    // Make the GET request with the appropriate Accept header.
+    let res = client
+        .get(&url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let text = res.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("HTTP {}: {}", status, text));
+    }
+
+    // Parse the response text as JSON.
+    let json_value: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("JSON parse error: {}", e))?;
+
+    // Navigate to the nested "resource_utilization" object.
+    let ru = json_value
+        .get("resource_utilization")
+        .ok_or("Missing resource_utilization field")?;
+
+    // Extract the "cpu" and "memory" fields.
+    let cpu = ru.get("cpu")
+        .and_then(|v| v.as_u64())
+        .ok_or("Missing or invalid 'cpu' field")? as u32;
+    let memory = ru.get("memory")
+        .and_then(|v| v.as_u64())
+        .ok_or("Missing or invalid 'memory' field")? as u32;
+
+    // Create the filtered struct.
+    let filtered = FilteredUtilization { cpu, memory };
+
+    // Return as JSON
+    serde_json::to_string(&filtered).map_err(|e| e.to_string())
+}
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -206,10 +308,10 @@ pub fn run() {
             set_local_storage,
             get_local_storage,
             generate_custom_token,
-            login_switch
+            login_switch,
+            logout_switch,
+            get_utilization
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");
 }
-
-

@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { environment } from '../../.env/environment';  // Adjust the path as needed
+import { environment } from '../../.env/environment'; // Adjust the path as needed
 import { invoke } from '@tauri-apps/api/core';
 
 @Component({
@@ -21,7 +21,7 @@ import { invoke } from '@tauri-apps/api/core';
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.css']
 })
-export class AnalyticsComponent {
+export class AnalyticsComponent implements OnDestroy {
   // UI State
   isLoggingIn = false;
 
@@ -41,52 +41,75 @@ export class AnalyticsComponent {
   criticalLogs = 0;
   warningLogs = 0;
 
+  // We'll use this timer to fetch utilization periodically.
+  private utilizationInterval: any;
+
   constructor(private dialog: MatDialog, private http: HttpClient) {}
 
   ngOnInit() {
-    // Start the login flow.
+    // Start login process on component initialization.
     this.loginFromFrontend();
   }
 
+  ngOnDestroy() {
+    // Clean up when the component is destroyed.
+    if (this.utilizationInterval) {
+      clearInterval(this.utilizationInterval);
+    }
+    this.logOutFrontend();
+  }
+  
   async loginFromFrontend() {
     try {
       const result = await invoke<string>('login_switch', {
-        username: 'admin',
-        password: '',
-        ip: '10.0.150.150', // or whatever IP your switch has
+        username: environment.ArubaInfo.username,
+        password: environment.ArubaInfo.password,
+        ip: environment.ArubaInfo.arubaIP,
       });
   
       console.log('Login successful:', result);
+      // Once logged in, begin fetching utilization.
+      this.fetchUtilization(environment.ArubaInfo.arubaIP);
+      
+      // Optionally, fetch utilization periodically (e.g. every 15 seconds):
+      this.utilizationInterval = setInterval(() => {
+        this.fetchUtilization(environment.ArubaInfo.arubaIP);
+      }, 15000); // 15000 ms = 15 seconds
+
     } catch (error) {
       console.error('Login failed:', error);
     }
   }
+
+  async logOutFrontend() {
+    try {
+      const result = await invoke<string>('logout_switch', {
+        ip: environment.ArubaInfo.arubaIP,
+      });
   
-
-  getResourceUtilization() {
-    // This URL uses query parameters to ask for just the resource_utilization attributes.
-    const url = `https://${environment.ArubaInfo.arubaIP}/rest/v10.12/system/subsystems?attributes=resource_utilization`;
-
-    this.http.get(url, {
-      // withCredentials sends cookies (including the SESSION cookie) automatically.
-      withCredentials: true,
-    }).subscribe({
-      next: (res: any) => {
-        const util = res.resource_utilization;
-        // Assign the API values to the component's properties.
-        this.cpuUtilization = util.cpu;
-        this.memoryUtilization = util.memory;
-        // Optionally, you may also use cpu_avg_1_min or cpu_avg_5_min:
-        const cpu1m = util.cpu_avg_1_min;
-        const cpu5m = util.cpu_avg_5_min;
-        console.log('CPU:', this.cpuUtilization, 'Memory:', this.memoryUtilization);
-      },
-      error: (err) => {
-        console.error('Failed to get resource utilization:', err);
-      }
-    });
+      console.log('Logout successful:', result);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   }
+  
+  // Fetch resource utilization, update CPU and memory data in the UI.
+  async fetchUtilization(ip: string) {
+    try {
+      const result = await invoke<string>('get_utilization', { ip });
+      console.log('Resource utilization:', result);
+      const utilData = JSON.parse(result);
+  
+      // Update properties used in the template.
+      this.cpuUtilization = utilData.cpu;
+      this.memoryUtilization = utilData.memory;
 
+      // You might also want to extract cpu_avg_1_min or cpu_avg_5_min if needed.
+    } catch (error) {
+      console.error('Error fetching utilization:', error);
+    }
+  }
+  
   openLogPopup() {
     this.dialog.open(LogPopupComponent, {
       width: '400px',
