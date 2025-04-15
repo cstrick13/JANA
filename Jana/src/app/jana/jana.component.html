@@ -1,28 +1,43 @@
 <!-- Overall Layout -->
-<!-- Full-Page Chat Layout -->
 <div class="chat-page">
   <!-- Scrollable messages area -->
   <div class="chat-messages-container">
-    <div *ngFor="let msg of chatMessages" 
-     class="chat-message" 
-     [ngClass]="{'user-message': msg.sender === 'user', 'ai-message': msg.sender === 'ai'}"
-     [innerHTML]="msg.content">
-</div>
+    <div
+      *ngFor="let msg of chatMessages"
+      [ngClass]="{
+        'ai-message': msg.sender === 'ai',
+        'user-message': msg.sender === 'user'
+      }"
+    >
+      <!-- If AI message, render Markdown -->
+      <markdown
+        *ngIf="msg.sender === 'ai'"
+        [data]="msg.content"
+        class="markdown-body"
+      ></markdown>
 
-</div>
-  
+      <!-- If user message, render plain text (or parse if you prefer) -->
+      <div *ngIf="msg.sender === 'user'">{{ msg.content }}</div>
+    </div>
+    <div class="loading-indicator" *ngIf="isLoading">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="loading-text">{{ loadingText }}</span>
+    </div>
+  </div>
 
   <!-- Fixed/Centered Input Bar -->
   <div class="chat-input-centered">
     <!-- Full width text area -->
     <textarea
-    [(ngModel)]="newChatMessage"
-    (keydown.enter)="handleEnter($event)"
-    (input)="adjustTextareaHeight($event)"
-    placeholder="Ask Jana..."
-    rows="1"
-  ></textarea>
-    
+      [(ngModel)]="newChatMessage"
+      (keydown.enter)="handleEnter($event)"
+      (input)="adjustTextareaHeight($event)"
+      placeholder="Ask Jana..."
+      rows="1"
+    ></textarea>
+
     <!-- Icons container placed underneath the textarea -->
     <div class="chat-input-icons">
       <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
@@ -33,17 +48,12 @@
       </button>
     </div>
   </div>
-  
 </div>
-
-
-
 
 <!-- Modal remains unchanged -->
 <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content custom-modal-content">
-      
       <!-- Custom Header with "traffic lights" -->
       <div class="custom-modal-header">
         <div class="traffic-lights">
@@ -56,14 +66,11 @@
       <!-- Modal Body -->
       <div class="custom-modal-body">
         <!-- White circle with canvas -->
-        <div class="visualizer"> 
-          <!-- Replace width/height as needed -->
+        <div class="visualizer">
           <canvas #canvas></canvas>
         </div>
         <!-- Bottom icons (replace with real icons or buttons) -->
         <div class="modal-icons">
-          <!-- Example using Font Awesome icons -->
-          <!-- Make sure to include Font Awesome in your index.html or project -->
           <button class="icon-button" (click)="startRecording()">
             <i class="fa fa-microphone"></i>
           </button>
@@ -75,8 +82,6 @@
           </button>
         </div>
       </div>
-
     </div>
   </div>
 </div>
-

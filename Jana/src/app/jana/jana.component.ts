@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
+import hljs from 'highlight.js';
 
 @Component({
   selector: 'app-jana',
@@ -22,6 +23,13 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     public wizardConfigService: WizardConfigService,
     private router: Router
   ) {}
+
+
+
+  
+  public isLoading: boolean = false;
+
+  
 
   private audioContext!: AudioContext;
   private analyser!: THREE.AudioAnalyser;
@@ -60,6 +68,10 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     this.initThree();
     this.startAnimationLoop();
   }
+  ngAfterViewChecked(): void {
+    // This will run after every change detection cycle
+    hljs.highlightAll();
+  }
 
   ngOnDestroy(): void {
     // Clean up the animation loop
@@ -76,12 +88,30 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     }
   }
 
+  
+
   adjustTextareaHeight(event: Event): void {
     const textarea = event.target as HTMLTextAreaElement;
     // Reset the height to auto to correctly calculate new scrollHeight
     textarea.style.height = 'auto';
     // Set the textarea height to match its scrollHeight, ensuring it expands with the text
     textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  public loadingMessages: string[] = [
+    "Jana is processing your request...",
+    "Please hold on—Jana is working on your answer.",
+    "Jana is thinking—one moment please.",
+    "Just a moment; Jana is gathering the information.",
+    "Jana is on it, please stand by."
+  ];
+  
+  public loadingText: string = "";
+  
+  // A helper to get a random message:
+  getRandomLoadingMessage(): string {
+    const index = Math.floor(Math.random() * this.loadingMessages.length);
+    return this.loadingMessages[index];
   }
 
 
@@ -119,6 +149,10 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
 
   
   async sendToAgent(text: string) {
+    // Set loading state to true so the UI can show the typing indicator
+    this.isLoading = true;
+    this.loadingText = this.getRandomLoadingMessage();
+    
     try {
       const agentResponse = await fetch('http://localhost:8000/run_task', {
         method: 'POST',
@@ -127,17 +161,22 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         },
         body: JSON.stringify({ task: text })
       });
+      
       if (!agentResponse.ok) {
         console.error('Agent request failed', agentResponse.statusText);
         this.chatMessages.push({ sender: 'ai', content: "Jana: Agent request failed." });
+        this.isLoading = false;
         return;
       }
+      
       const reader = agentResponse.body?.getReader();
       if (!reader) {
         console.error('No reader available for agentResponse');
         this.chatMessages.push({ sender: 'ai', content: "Jana: No agent response available." });
+        this.isLoading = false;
         return;
       }
+      
       const decoder = new TextDecoder();
       let finalReply = '';
       while (true) {
@@ -145,23 +184,35 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         if (done) break;
         const chunkText = decoder.decode(value, { stream: true });
         console.log('SSE chunk from agent:', chunkText);
-        finalReply = chunkText;
-        // Optionally, you can accumulate text from multiple chunks if needed.
+        finalReply = chunkText; 
       }
       
       console.log('Final agent reply:', finalReply);
       
-      // Manually process markdown to convert it to HTML.
-      const processedHtml = this.processMarkdown(finalReply);
+      // Optional: process the final reply if it's JSON or contains code fences.
+      try {
+        finalReply = JSON.parse(finalReply);
+      } catch (error) {
+        console.error("Error parsing final reply as JSON:", error);
+      }
       
-      // Push the resulting HTML to your chat messages.
-      this.chatMessages.push({ sender: 'ai', content: processedHtml });
-  
+      if (finalReply.startsWith('```markdown')) {
+        finalReply = finalReply.replace(/^```markdown\s*/, '').replace(/\s*```$/, '');
+      }
+      console.log(finalReply);
+      
+      // Push the final agent reply into the chat
+      this.chatMessages.push({ sender: 'ai', content: finalReply });
+      
     } catch (error) {
       console.error('Error sending chat to agent:', error);
       this.chatMessages.push({ sender: 'ai', content: "Error processing your message." });
+    } finally {
+      // In any case, turn off the loading indicator.
+      this.isLoading = false;
     }
   }
+  
   
   resetWizard() {
     // Set wizardFinished to false
@@ -380,10 +431,12 @@ vec3 fade(vec3 t) {
                 sound.setVolume(0.5);
                 sound.play();
                 this.analyser = new THREE.AudioAnalyser(sound, 32);
-            },
+            }
+            ,
             undefined,
             (err) => console.error('Audio loading error:', err)
         );
+        this.chatMessages.push({ sender: 'ai', content: textToSpeak });
     } catch (error) {
         console.error('Error calling TTS or playing audio:', error);
     }

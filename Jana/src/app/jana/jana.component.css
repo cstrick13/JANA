@@ -4,51 +4,214 @@
 .chat-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background-color: #dad2d2; /* Light gray background */
-  overflow: hidden; /* We handle scrolling in the messages container */
+  min-height: 100vh;
+  overflow: hidden;         /* Scroll handled in messages container */
   position: relative;
 }
 
 /***********************************************
-  Scrollable Messages
+  Scrollable Messages Container
 ***********************************************/
 .chat-messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
-  /* Extra bottom padding so messages aren’t hidden behind the input bar */
-  padding-bottom: 120px;
+  padding: 2rem 1rem;
+  padding-bottom: 120px;       /* Leave space for input bar */
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  align-items: center;
+  /* Constrain & center the conversation area */
+  max-width: 800px;
+  margin: 0 auto;
 }
 
+/***********************************************
+  Message Blocks
+***********************************************/
+/* Base styling for any message */
 .chat-message {
-  max-width: 70%;
   width: 100%;
-  background-color: #fff;
-  color: #333;
+  word-wrap: break-word;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+/* User messages (bubble style) */
+.user-message {
+  background-color: #3c3d3c;
   padding: 1rem;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  line-height: 1.5;
-  word-wrap: break-word;
-  text-align: left;
+  max-width: 60ch;          /* Constrain width for readability */
+  margin-left: auto;        /* Align to the right */
+  color: #f0f0f0;
 }
 
-.user-message {
-  background-color: #dcf8c6;  /* Light green */
-
-}
-
-/* AI messages: align to the left with standard white background */
+/* AI messages: remove bubble styling so they appear as plain page text */
 .ai-message {
-  background-color: #fff;
- 
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;  /* No bubble width limit */
+  /* The AI markdown will be styled via .markdown-body */
 }
 
+/***********************************************
+  Markdown Styling for AI Messages
+***********************************************/
+.markdown-body {
+  /* Increase font size and line-height for a more readable, modern look */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+               Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  line-height: 1.6;
+  color: #ffffff;
+  text-align: left;  /* Typically, the rendered text is left-aligned for reading */
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 8px;
+
+}
+
+::ng-deep .ai-message .markdown-body h1 {
+  font-size: 2.5rem !important;
+  font-weight: bold !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.75em !important;
+  color: #fff !important;
+}
+::ng-deep .ai-message .markdown-body h2 {
+  font-size: 1.75rem !important;
+  font-weight: bold !important;
+  margin-top: 1.4em !important;
+  margin-bottom: 0.7em !important;
+  color: #fff !important;
+}
+::ng-deep .ai-message .markdown-body h3,
+::ng-deep .ai-message .markdown-body h4,
+::ng-deep .ai-message .markdown-body h5,
+::ng-deep .ai-message .markdown-body h6 {
+  font-size: 1.4rem !important;
+  font-weight: bold !important;
+  margin-top: 1.2em !important;
+  margin-bottom: 0.6em !important;
+  color: #fff !important;
+}
+
+/* Paragraphs */
+::ng-deep .ai-message .markdown-body p {
+  margin: 1em 0 !important;
+  font-size: 1.2rem !important;
+  color: #fff !important;
+}
+
+/* Lists */
+::ng-deep .ai-message .markdown-body ul,
+::ng-deep .ai-message .markdown-body ol {
+  margin: 1em 0 !important;
+  padding-left: 1.5em !important;
+  font-size: 1.2rem !important;
+  color: #fff !important;
+}
+
+/* Blockquotes */
+::ng-deep .ai-message .markdown-body blockquote {
+  margin: 1em 0 !important;
+  padding: 0.5em 1em !important;
+  border-left: 4px solid #444 !important;
+  font-style: italic !important;
+  color: #ccc !important;
+  font-size: 1.2rem !important;
+}
+
+/* Horizontal Rules */
+::ng-deep .ai-message .markdown-body hr {
+  border: none !important;
+  height: 1px !important;
+  background-color: #444 !important;
+  margin: 1.5em 0 !important;
+}
+
+/* Links */
+::ng-deep .ai-message .markdown-body a {
+  color: #4d9eff !important;
+  text-decoration: underline !important;
+}
+::ng-deep .ai-message .markdown-body a:hover {
+  color: #82b1ff !important;
+}
+
+/* Images */
+::ng-deep .ai-message .markdown-body img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 1em auto !important;
+}
+
+/* Table Styling */
+::ng-deep .ai-message .markdown-body table {
+  display: table !important;
+  width: 90% !important;
+  margin: 1em auto !important;
+  border-collapse: collapse !important;
+  background-color: #1a1a1a !important;
+  color: #fff !important;
+}
+::ng-deep .ai-message .markdown-body th,
+::ng-deep .ai-message .markdown-body td {
+  border: 1px solid #444 !important;
+  padding: 0.75em !important;
+  text-align: center !important;
+  color: #fff !important;
+}
+::ng-deep .ai-message .markdown-body th {
+  background-color: #222 !important;
+}
+
+/* Code Blocks */
+::ng-deep .ai-message .markdown-body pre {
+  background-color: #1a1a1a !important;
+  padding: 1em !important;
+  border: 1px solid #333 !important;
+  border-radius: 4px !important;
+  overflow-x: auto !important;
+  margin: 1em 0 !important;
+  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
+  font-size: 1.1rem !important;
+  color: #fff !important;
+  border-top: 3px solid #555 !important;
+}
+
+/* Inline Code */
+::ng-deep .ai-message .markdown-body code {
+  background-color: #1a1a1a !important;
+  padding: 0.2em 0.4em !important;
+  border: 1px solid #333 !important;
+  border-radius: 3px !important;
+  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
+  font-size: 1.1rem !important;
+  color: #fff !important;
+}
+::ng-deep .ai-message .markdown-body pre {
+  position: relative; /* Ensure we have a containing block for absolutely positioned children */
+}
+
+/* Use a pseudo-element to show the language */
+::ng-deep .ai-message .markdown-body pre code[class^="language-"]::before {
+  content: attr(class); /* This will show "language-javascript" */
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.2em 0.4em;
+  font-size: 0.8rem;
+  color: #ccc;
+  text-transform: uppercase;
+  border-bottom-left-radius: 4px;
+}
 /***********************************************
   Chat Input Area
 ***********************************************/
@@ -56,22 +219,20 @@
   position: fixed;
   bottom: 40px;
   left: 50%;
-  transform: translateX(-40%);
-  width: 600px;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 800px;
   min-height: 80px;
-  height: auto;
-  /* Change the direction to column so textarea is on top and icons are below */
-  display: flex;
-  flex-direction: column;
   background-color: #fff;
   border: 1px solid #ccc;
   border-radius: 10px;
-  padding: 0.75rem 1.5rem;
+  padding: 1rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   z-index: 2;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Textarea uses full container width */
 .chat-input-centered textarea {
   width: 100%;
   background: transparent;
@@ -83,23 +244,19 @@
   max-height: 150px;
   overflow-y: auto;
   padding: 0;
-  
-  /* Allow text wrapping inside the textarea */
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  margin-bottom: 0.5rem;
 }
 
-/* Container for icons placed underneath the textarea */
 .chat-input-icons {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.5rem; /* space between textarea and icons */
-  justify-content: flex-end; /* align icons to the right; adjust as needed */
+  justify-content: flex-end;
   width: 100%;
 }
 
-/* Send button with icon */
 .send-btn {
   background: none;
   border: none;
@@ -115,9 +272,9 @@
   background-color: #e0e0e0;
 }
 
-/* Other existing styles below remain unchanged */
-
-/* Overall modal container */
+/***********************************************
+  Modal and Other Styles (Unchanged)
+***********************************************/
 .custom-modal-content {
   background-color: black;
   border: none;
@@ -125,7 +282,6 @@
   color: #fff;
 }
 
-/* Custom header to mimic macOS traffic lights */
 .custom-modal-header {
   display: flex;
   align-items: center;
@@ -155,7 +311,6 @@
   background-color: #27c93f;
 }
 
-/* Body: center content vertically/horizontally */
 .custom-modal-body {
   display: flex;
   flex-direction: column;
@@ -163,7 +318,6 @@
   padding: 20px;
 }
 
-/* White circle container for the canvas */
 .circle {
   width: 200px;
   height: 200px;
@@ -175,7 +329,6 @@
   justify-content: center;
 }
 
-/* Text beneath the circle */
 .modal-text {
   margin: 0;
   padding: 10px 0;
@@ -183,14 +336,12 @@
   text-align: center;
 }
 
-/* Bottom icon bar */
 .modal-icons {
   display: flex;
   gap: 15px;
   margin-top: 20px;
 }
 
-/* Example icon button style */
 .icon-button {
   background: none;
   border: none;
@@ -214,3 +365,53 @@
   height: auto;
   display: block;
 }
+
+/* Container for the loading indicator */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+/* Style for each dot */
+.loading-indicator .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: blink 1.4s infinite both;
+}
+
+/* Delay each dot slightly */
+.loading-indicator .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+.loading-indicator .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.loading-indicator .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Keyframes for the dot blinking animation */
+@keyframes blink {
+  0%, 80%, 100% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* Optionally style the loading text */
+.loading-indicator .loading-text {
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+

@@ -166,9 +166,11 @@ fn start_docker_compose(app_handle: &AppHandle) -> std::io::Result<Child> {
         .arg("-f")
         .arg(compose_path)
         .arg("up")
+         // 👈 this will rebuild images
         .arg("-d")
         .spawn()
 }
+
 
 #[tauri::command]
 async fn login_switch(username: String, password: String, ip: String) -> Result<String, String> {
