@@ -86,11 +86,24 @@ input:checked + .slider:before {
   color: #fff;
   font-size: 0.95rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .device-card i {
   font-size: 28px;
   margin-bottom: 0.5rem;
+}
+
+.device-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Custom styling for the active device */
+.active-switch {
+  border-color: #28a745 !important;
+  background-color: #e6ffe6;
 }
 
 .device-purple { background: #7F56D9; }

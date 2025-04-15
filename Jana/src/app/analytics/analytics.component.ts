@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { environment } from '../../.env/environment'; // Adjust the path as needed
 import { invoke } from '@tauri-apps/api/core';
+import { Subscription } from 'rxjs';
+
 
 @Component({
   selector: 'app-analytics',
@@ -22,111 +24,107 @@ import { invoke } from '@tauri-apps/api/core';
   styleUrls: ['./analytics.component.css']
 })
 export class AnalyticsComponent implements OnDestroy {
-  // UI State
-  isLoggingIn = false;
 
-  // Hardware Data (will be updated from API)
+  isLoggingIn = false;
   cpuUtilization = 0;
   memoryUtilization = 0;
   moduleName = 'Mgmt Module 1/1';
-
   currentVersion = "FL.10.12.1021";
   primaryVersion = "FL.10.12.1021";
   secondaryVersion = "FL.10.06.0120";
-
   totalFans = 3;
   criticalFans = 0;
   warningFans = 0;
-
   criticalLogs = 0;
   warningLogs = 0;
-
-  // We'll use this timer to fetch utilization periodically.
   private utilizationInterval: any;
+  private deviceSub!: Subscription;
+  selectedDevice!: Device;
 
-  constructor(private dialog: MatDialog, private http: HttpClient) {}
+  constructor(private dialog: MatDialog, private http: HttpClient, private deviceService: DeviceService) {}
 
   ngOnInit() {
-    // Start login process on component initialization.
-    this.loginFromFrontend();
+    // Subscribe to the selected device from the shared service.
+    this.deviceSub = this.deviceService.selectedDevice$.subscribe(device => {
+      if (device) {
+        this.selectedDevice = device;
+        // Use the device's IP for login and utilization.
+        this.loginFromFrontend(device);
+      } else {
+        console.log('No device selected.');
+      }
+    });
   }
 
   ngOnDestroy() {
-    // Clean up when the component is destroyed.
-    //if (this.utilizationInterval) {
-    //  clearInterval(this.utilizationInterval);
-    //}
+    if (this.utilizationInterval) {
+      clearInterval(this.utilizationInterval);
+    }
+    if (this.deviceSub) {
+      this.deviceSub.unsubscribe();
+    }
+    // Optionally log out from the current device.
     // this.logOutFrontend();
   }
 
-  async loginFromFrontend() {
-    try {
-      const result = await invoke<string>('login_switch', {
-        username: environment.ArubaInfo.username,
-        password: environment.ArubaInfo.password,
-        ip: environment.ArubaInfo.arubaIP,
-      });
-  
-      console.log('Login successful:', result);
-      // Once logged in, begin fetching utilization.
-      this.fetchUtilization(environment.ArubaInfo.arubaIP);
-      
-      // Optionally, fetch utilization periodically (e.g. every 15 seconds):
-      this.utilizationInterval = setInterval(() => {
-        this.fetchUtilization(environment.ArubaInfo.arubaIP);
-      }, 15000); // 15000 ms = 15 seconds
-
-    } catch (error) {
-      console.error('Login failed:', error);
+  async loginFromFrontend(device: Device) {
+    if(device.version == "old"){
+      console.log("This is a different for different commands");
+    }else if(device.version == "new"){
+      try {
+        const result = await invoke<string>('login_switch', {
+          username: device.username, // Adjust based on how you want to manage credentials.
+          password: device.password, // This is just an example; you may store credentials separately.
+          ip: device.ip,
+        });
+        console.log('Login successful:', result);
+        this.fetchUtilization(device.ip);
+        if (this.utilizationInterval) {
+          clearInterval(this.utilizationInterval);
+        }
+        this.utilizationInterval = setInterval(() => {
+          this.fetchUtilization(device.ip);
+        }, 15000);
+      } catch (error) {
+        console.error('Login failed:', error);
+      }
     }
   }
 
   async logOutFrontend() {
+    if (!this.selectedDevice) return;
     try {
-      const result = await invoke<string>('logout_switch', {
-        ip: environment.ArubaInfo.arubaIP,
-      });
-  
+      const result = await invoke<string>('logout_switch', { ip: this.selectedDevice.ip });
       console.log('Logout successful:', result);
     } catch (error) {
       console.error('Logout failed:', error);
     }
   }
-  
-  // Fetch resource utilization, update CPU and memory data in the UI.
+
   async fetchUtilization(ip: string) {
     try {
       const result = await invoke<string>('get_utilization', { ip });
       console.log('Resource utilization:', result);
       const utilData = JSON.parse(result);
-  
-      // Update properties used in the template.
       this.cpuUtilization = utilData.cpu;
       this.memoryUtilization = utilData.memory;
-
-      // You might also want to extract cpu_avg_1_min or cpu_avg_5_min if needed.
     } catch (error) {
       console.error('Error fetching utilization:', error);
     }
   }
-  
+
   async openLogPopup() {
+    if (!this.selectedDevice) return;
     try {
-      // Invoke the new Tauri command to fetch filtered logs.
-      const logsResult = await invoke<string>('get_event_logs', { ip: environment.ArubaInfo.arubaIP });
+      const logsResult = await invoke<string>('get_event_logs', { ip: this.selectedDevice.ip });
       console.log('Fetched filtered logs:', logsResult);
-  
-      // Assume logsResult is a JSON string array (e.g. '["log entry 1", "log entry 2", ...]')
       const logs: string[] = JSON.parse(logsResult);
-  
-      // Open the log popup with the fetched logs.
       this.dialog.open(LogPopupComponent, {
         width: '400px',
         data: { logs }
       });
     } catch (error) {
       console.error('Error fetching logs:', error);
-      // If there's an error fetching logs, open the popup with fallback data.
       this.dialog.open(LogPopupComponent, {
         width: '400px',
         data: { logs: ['Failed to fetch logs', JSON.stringify(error)] }
@@ -138,6 +136,7 @@ export class AnalyticsComponent implements OnDestroy {
 // Components for the log pop-up within the analytics page
 import { Component as DialogComponent, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { Device, DeviceService } from '../devices.service';
 
 @Component({
   selector: 'app-log-popup',

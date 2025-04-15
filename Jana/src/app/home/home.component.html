@@ -87,70 +87,68 @@
       <div class="card sidebar-card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="mb-0">Network Devices</h6>
-          <div class="d-flex align-items-center gap-2">
-            <span>ON</span>
-            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-            <i class="fas fa-chevron-right"></i>
-          </div>
+          <!-- The Add button opens the modal -->
+            <i class="fas fa-plus me-1"data-bs-toggle="modal" data-bs-target="#addDeviceModal"></i>
         </div>
-      
+    
         <div class="row g-3">
-          <div class="col-6">
-            <div class="device-card device-purple">
+          <!-- Loop through devices and display a styled card for each -->
+          <div class="col-6" *ngFor="let device of devices">
+            <div class="device-card"
+                 [ngClass]="{'active-switch': selectedDevice?.name === device.name, 'device-purple': true}" 
+                 (click)="onDeviceClick(device)">
               <i class="fas fa-network-wired"></i>
-              <span>Core Router</span>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="device-card device-yellow">
-              <i class="fas fa-exchange-alt"></i>
-              <span>Edge Switch</span>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="device-card device-orange">
-              <i class="fas fa-exchange-alt"></i>
-              <span>Access Switch 1</span>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="device-card device-cyan">
-              <i class="fas fa-exchange-alt"></i>
-              <span>Access Switch 2</span>
+              <span>{{ device.name }}</span>
+              <!-- Show an "Active" badge if this device is selected -->
+              <span *ngIf="selectedDevice?.name === device.name" class="badge bg-success mt-1">Active</span>
             </div>
           </div>
         </div>
       </div>
-      
+    </div>
+    
+    
+</div>
 
-      <div class="card sidebar-card p-3">
-        <h6>Server Status</h6>
-        <ul class="list-group list-group-flush mt-2">
-          <li class="list-group-item d-flex justify-content-between">Auth Server <span class="badge bg-success">Online</span></li>
-          <li class="list-group-item d-flex justify-content-between">DB Server <span class="badge bg-success">Online</span></li>
-          <li class="list-group-item d-flex justify-content-between">Backup Server <span class="badge bg-danger">Offline</span></li>
-        </ul>
+
+<div class="modal fade" id="addDeviceModal" tabindex="-1" aria-labelledby="addDeviceModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addDeviceModalLabel">Add New Switch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
-      <div class="card sidebar-card p-3">
-        <h6>Recent Alerts</h6>
-        <ul class="list-group list-group-flush mt-2">
-          <li class="list-group-item">
-            <small class="text-muted">10:12 AM</small><br/>
-            <strong>High packet loss on Router‑02</strong>
-          </li>
-          <li class="list-group-item">
-            <small class="text-muted">09:45 AM</small><br/>
-            <strong>Firmware update available for Switch‑03</strong>
-          </li>
-        </ul>
+      <div class="modal-body">
+        <!-- Bind the form fields using ngModel -->
+        <form id="addDeviceForm">
+          <div class="mb-3">
+            <label for="switchName" class="form-label">Switch Name</label>
+            <input type="text" class="form-control" id="switchName" [(ngModel)]="newDevice.name" name="switchName" required>
+          </div>
+          <div class="mb-3">
+            <label for="switchIp" class="form-label">IP Address</label>
+            <input type="text" class="form-control" id="switchIp" [(ngModel)]="newDevice.ip" name="switchIp" required>
+          </div>
+          <div class="mb-3">
+            <label for="switchVersion" class="form-label">Version</label>
+            <input type="text" class="form-control" id="switchVersion" [(ngModel)]="newDevice.version" name="switchVersion" required>
+          </div>
+          <div class="mb-3">
+            <label for="switchUsername" class="form-label">Username</label>
+            <input type="text" class="form-control" id="switchUsername" [(ngModel)]="newDevice.username" name="switchUsername" required>
+          </div>
+          <div class="mb-3">
+            <label for="switchPassword" class="form-label">Password</label>
+            <input type="password" class="form-control" id="switchPassword" [(ngModel)]="newDevice.password" name="switchPassword" required>
+          </div>
+        </form>
       </div>
-
-      <div class="card sidebar-card p-3">
-        <h6>Power Consumed</h6>
-        <div class="fake-chart mt-2">[Chart Placeholder]</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <!-- Call the onSaveDevice method on click -->
+        <button type="button" class="btn btn-primary" (click)="onSaveDevice()" data-bs-dismiss="modal">Add Device</button>
       </div>
-
     </div>
   </div>
 </div>
+

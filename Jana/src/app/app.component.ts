@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { invoke } from '@tauri-apps/api/core';
 import { WizardConfigService } from './wizard-config.service';
 import { AuthService } from './auth.service';
+import { Device, DeviceService } from './devices.service';
+import { Subscription } from 'rxjs';
 
 interface SideNavToggle {
   screenWidth: number;
@@ -24,11 +26,14 @@ export class AppComponent implements OnInit {
   isSideNavCollapsed = false;
   screenWidth = 0;
   greetingMessage = '';
+  selectedDevice: Device | null = null;
+  private deviceSub!: Subscription;
 
   constructor(
     public router: Router,
     public wizardConfigService: WizardConfigService,
-    private authService: AuthService
+    private authService: AuthService,
+    private deviceService: DeviceService
   ) {}
 
   ngOnInit(): void {
@@ -68,6 +73,10 @@ export class AppComponent implements OnInit {
           this.router.navigate(['/login']);
         }
       }, Math.max(0, minimumLoadingTime - elapsed));
+    });
+    this.deviceSub = this.deviceService.selectedDevice$.subscribe(device => {
+      this.selectedDevice = device;
+      console.log('Current selected device changed to:', device);
     });
   }
 
