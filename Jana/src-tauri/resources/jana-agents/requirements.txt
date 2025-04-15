@@ -8,3 +8,4 @@ asgiref
 fastapi
 uvicorn
 paramiko
+tavily-python
