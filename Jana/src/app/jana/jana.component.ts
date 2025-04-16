@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 import hljs from 'highlight.js';
-import { addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAfter, Timestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAfter, Timestamp, where } from 'firebase/firestore';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth.service';
 import { invoke } from '@tauri-apps/api/core';
@@ -57,10 +57,6 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   private lastChatDoc: any = null;  
     // Number of chats to load in each batch
   private batchSize: number = 30;  
-  // Inside JanaComponent:
-public jsonDownloadUrl: string | null = null;
-public jsonDownloadName: string   = '';
-
 
   
 
@@ -203,40 +199,50 @@ public jsonDownloadName: string   = '';
   }
   
   sendChatMessage(): void {
-    // Don’t even try to send if there’s no text
     if (!this.newChatMessage.trim()) return;
   
-    // If chatMessages is empty ⟶ brand-new chat, so clear any old widget ID
+    // Clear old widget if this is the first message of a new chat
     if (this.chatMessages.length === 0 && this.currentWidgetId) {
-      console.log('First message in new chat, clearing old widget ID');
       this.clearSelectedChatId();
     }
   
-    // Now go on and actually push the user message
-    const userMessage: ChatMessage = {
+    // 1) Capture the new message, but don't mutate chatMessages yet
+    const newMsg: ChatMessage = {
       sender: 'user',
       content: this.newChatMessage.trim()
     };
-    this.chatMessages.push(userMessage);
   
-    // And then handle widget creation vs. existing widget
-    if (!this.currentWidgetId) {
-      this.createNewWidgetIfNeeded(userMessage.content)
-        .then(() => {
-          this.sendToAgent(userMessage.content);
-          this.persistActiveWidgetToFirebase();
-          this.persistChatMessages();
-        })
-        .catch(err => console.error(err));
-    } else {
-      this.sendToAgent(userMessage.content);
+    // 2) Clone the *existing* history (before the new turn)
+    const historyOnly = [...this.chatMessages];
+  
+    // 3) Build your payload: history without the new turn, plus the new turn
+    const payload = {
+      history: historyOnly,           // previous conversation only
+      newMessage: newMsg.content      // the new user text
+    };
+    console.log('Sending payload:', payload);
+  
+    // 4) Now append the new message into this.chatMessages so UI updates
+    this.chatMessages.push(newMsg);
+  
+    const afterSave = () => {
+      this.sendToAgent(payload);
       this.persistActiveWidgetToFirebase();
       this.persistChatMessages();
+    };
+  
+    if (!this.currentWidgetId) {
+      this.createNewWidgetIfNeeded(newMsg.content)
+        .then(afterSave)
+        .catch(err => console.error(err));
+    } else {
+      afterSave();
     }
   
-    // Clear the input for the next message
     this.newChatMessage = '';
   }
+  
+  
   
   
 
@@ -443,51 +449,33 @@ public jsonDownloadName: string   = '';
   
 
   public currentWidgetId: string | null = null;
-  async loadWidget(widget: SavedWidget): Promise<void> {
+  loadWidget(widget: SavedWidget): void {
     console.log('Loading widget:', widget);
-  
-    // 1) Clear the current UI
+    
+    // Clear the current chat messages
     this.chatMessages = [];
-  
-    // 2) Set & persist the active widget ID
+    
+    // Update the current widget id if available
     if (widget.id) {
       this.currentWidgetId = widget.id;
       console.log('Current widget id set to:', this.currentWidgetId);
+      // Persist the selected chat id to local storage
       this.persistSelectedChatId();
     } else {
-      console.warn('Widget has no id, clearing currentWidgetId');
-      this.clearSelectedChatId();
+      console.warn('Widget has no id, setting currentWidgetId to null');
+      this.currentWidgetId = null;
+      // Remove it from storage if necessary
+      this.persistSelectedChatId();
     }
-  
-    // 3) Load into the chat window
-    widget.messages.forEach(msg => this.chatMessages.push({ ...msg }));
+    
+    // Load widget messages
+    widget.messages.forEach(msg => {
+      this.chatMessages.push({ ...msg });
+    });
     this.persistChatMessages();
   
-    // 4) (Optional) refresh the list if you need it
+    // Optionally, refresh the list to verify newest updates
     this.refreshChats();
-  
-    // 5) Fetch the Firestore record
-    if (this.currentWidgetId && this.currentUser?.uid) {
-      const ref = doc(
-        AppModule.db,
-        'users', this.currentUser.uid,
-        'chats', this.currentWidgetId
-      );
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return;
-  
-      const data   = snap.data();
-      const json   = JSON.stringify(data, null, 2);
-      const blob   = new Blob([json], { type: 'application/json' });
-      const url    = URL.createObjectURL(blob);
-  
-      // Set up a visible link
-      this.jsonDownloadUrl  = url;
-      this.jsonDownloadName = `chat-widget-${this.currentWidgetId}.json`;
-  
-      // (Optional) revoke the old one when you load another widget:
-      // URL.revokeObjectURL(previousUrl);
-    }
   }
 
   persistSelectedChatId(): void {
@@ -722,73 +710,67 @@ clearSelectedChatId(): void {
   
 
   
-  async sendToAgent(text: string) {
-    // Set loading state to true so the UI can show the typing indicator
-    this.isLoading = true;
-    this.loadingText = this.getRandomLoadingMessage();
-    
-    try {
-      const agentResponse = await fetch('http://localhost:8000/run_task', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ task: text })
-      });
-      
-      if (!agentResponse.ok) {
-        console.error('Agent request failed', agentResponse.statusText);
-        this.chatMessages.push({ sender: 'ai', content: "Jana: Agent request failed." });
-        this.isLoading = false;
-        return;
-      }
-      
-      const reader = agentResponse.body?.getReader();
-      if (!reader) {
-        console.error('No reader available for agentResponse');
-        this.chatMessages.push({ sender: 'ai', content: "Jana: No agent response available." });
-        this.isLoading = false;
-        return;
-      }
-      
-      const decoder = new TextDecoder();
-      let finalReply = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunkText = decoder.decode(value, { stream: true });
-        console.log('SSE chunk from agent:', chunkText);
-        finalReply = chunkText; 
-      }
-      
-      console.log('Final agent reply:', finalReply);
-      
-      // Optional: process the final reply if it's JSON or contains code fences.
-      try {
-        finalReply = JSON.parse(finalReply);
-      } catch (error) {
-        console.error("Error parsing final reply as JSON:", error);
-      }
-      
-      if (finalReply.startsWith('```markdown')) {
-        finalReply = finalReply.replace(/^```markdown\s*/, '').replace(/\s*```$/, '');
-      }
-      console.log(finalReply);
-      
-      // Push the final agent reply into the chat
-      this.chatMessages.push({ sender: 'ai', content: finalReply });
-      console.log('Calling persistActiveWidgetToFirebase() after updating messages');
-      this.persistActiveWidgetToFirebase();
-      this.persistChatMessages();
-      
-    } catch (error) {
-      console.error('Error sending chat to agent:', error);
-      this.chatMessages.push({ sender: 'ai', content: "Error processing your message." });
-    } finally {
-      // In any case, turn off the loading indicator.
-      this.isLoading = false;
+  // 2) Change sendToAgent to accept that payload object
+async sendToAgent(payload: {history: ChatMessage[];newMessage: string;}) {
+  this.isLoading = true;
+  this.loadingText = this.getRandomLoadingMessage();
+
+  try {
+    const agentResponse = await fetch('http://localhost:8000/run_task', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        task:      payload.newMessage,  // <— required by your API
+        history:   payload.history      // <— your extra context
+      }),
+    });
+
+    if (!agentResponse.ok) {
+      console.error('Agent request failed', agentResponse.statusText);
+      this.chatMessages.push({ sender: 'ai', content: "Jana: Agent request failed." });
+      return;
     }
+
+    const reader = agentResponse.body?.getReader();
+    if (!reader) {
+      console.error('No reader available for agentResponse');
+      this.chatMessages.push({ sender: 'ai', content: "Jana: No agent response available." });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let finalReply = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      finalReply = decoder.decode(value, { stream: true });
+    }
+
+    // parse JSON if needed
+    try {
+      finalReply = JSON.parse(finalReply);
+    } catch { /* not JSON, ignore */ }
+
+    // strip markdown fences, etc.
+    if (finalReply.startsWith('```')) {
+      finalReply = finalReply.replace(/```[^\n]*\n?/, '').replace(/```$/, '');
+    }
+
+    // push AI reply
+    this.chatMessages.push({ sender: 'ai', content: finalReply });
+    this.persistActiveWidgetToFirebase();
+    this.persistChatMessages();
+
+  } catch (error) {
+    console.error('Error sending chat to agent:', error);
+    this.chatMessages.push({ sender: 'ai', content: "Error processing your message." });
+  } finally {
+    this.isLoading = false;
   }
+}
+
   
   
   resetWizard() {
