@@ -35,24 +35,27 @@ async def index():
 
 # Define a Pydantic model for the incoming request
 class TaskRequest(BaseModel):
+    history: List[dict]
     task: str
-
 
 @app.post("/run_task")
 async def run_task_route(task_request: TaskRequest):
-    global previous_response
-
-    task = task_request.task
-    print(f"Running task: {task}")
-
-    if not task:
+    if not task_request.task:
+        print("No task provided")
         raise HTTPException(status_code=400, detail="No task provided")
+    history: List[LLMMessage] = []
+    context = task_request.history
+    print(context)
+    for message in context:
+        print(f"Message: {message}")
+        if message["sender"] == "user":
+            history.append(UserMessage(content=message["content"], source="user"))
+        else:
+            history.append(AssistantMessage(content=message["content"], source=switch_admin_agent_topic_type))
+    print(f"Running task: {context}")
 
-    response = await chat(task, history=previous_response)
-    previous_response.append(UserMessage(content=task, source="User"))
-    previous_response.append(
-        AssistantMessage(content=response, source=switch_admin_agent_topic_type)
-    )
+
+    response = await chat(task=task_request.task, history=history)
     return response
 
 
