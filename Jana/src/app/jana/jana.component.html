@@ -1,54 +1,73 @@
 <!-- Overall Layout -->
 <div class="chat-page">
   <!-- Scrollable messages area -->
-  <div class="chat-messages-container">
-    <div
-      *ngFor="let msg of chatMessages"
-      [ngClass]="{
-        'ai-message': msg.sender === 'ai',
-        'user-message': msg.sender === 'user'
-      }"
-    >
-      <!-- If AI message, render Markdown -->
-      <markdown
-        *ngIf="msg.sender === 'ai'"
-        [data]="msg.content"
-        class="markdown-body"
-      ></markdown>
-
-      <!-- If user message, render plain text (or parse if you prefer) -->
-      <div *ngIf="msg.sender === 'user'">{{ msg.content }}</div>
-    </div>
-    <div class="loading-indicator" *ngIf="isLoading">
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="loading-text">{{ loadingText }}</span>
-    </div>
+ <!-- Chat Messages Area -->
+<div class="chat-messages-container">
+  <div
+    *ngFor="let msg of chatMessages"
+    [ngClass]="{
+      'ai-message': msg.sender === 'ai',
+      'user-message': msg.sender === 'user'
+    }"
+  >
+    <!-- Render AI messages in the markdown component -->
+    <markdown
+      *ngIf="msg.sender === 'ai'"
+      [data]="msg.content"
+      class="markdown-body"
+    ></markdown>
+    <!-- Render user messages normally -->
+    <div *ngIf="msg.sender === 'user'">{{ msg.content }}</div>
   </div>
-
-  <!-- Fixed/Centered Input Bar -->
-  <div class="chat-input-centered">
-    <!-- Full width text area -->
-    <textarea
-      [(ngModel)]="newChatMessage"
-      (keydown.enter)="handleEnter($event)"
-      (input)="adjustTextareaHeight($event)"
-      placeholder="Ask Jana..."
-      rows="1"
-    ></textarea>
-
-    <!-- Icons container placed underneath the textarea -->
-    <div class="chat-input-icons">
-      <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
-        <i class="fa fa-microphone"></i>
-      </button>
-      <button class="send-btn" (click)="sendChatMessage()">
-        <i class="fa fa-paper-plane"></i>
-      </button>
-    </div>
+  <div class="loading-indicator" *ngIf="isLoading">
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="loading-text">{{ loadingText }}</span>
   </div>
 </div>
+
+<!-- Fixed/Centered Input Bar -->
+<div class="chat-input-centered">
+  <textarea
+    [(ngModel)]="newChatMessage"
+    (keydown.enter)="handleEnter($event)"
+    (input)="adjustTextareaHeight($event)"
+    placeholder="Ask Jana..."
+    rows="1"
+  ></textarea>
+  <div class="chat-input-icons">
+    <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
+      <i class="fa fa-microphone"></i>
+    </button>
+    <button class="send-btn" (click)="sendChatMessage()">
+      <i class="fa fa-paper-plane"></i>
+    </button>
+    <button class="send-btn" data-bs-toggle="modal" data-bs-target="#titleModal">
+      <i class="fa fa-save"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Widget Bar for Saved Chats -->
+<div class="right-sidenav" #rightSidenav (scroll)="onScroll($event)">
+  <div *ngFor="let groupLabel of getGroupLabels()">
+    <h3>{{ groupLabel }}</h3>
+    <div *ngFor="let widget of groupedWidgets[groupLabel]">
+      <button (click)="loadWidget(widget)">
+        {{ widget.title }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Show the Load More button if either the content doesn't overflow OR if we know there's more (canLoadMore) -->
+  <button *ngIf="canLoadMore" class="load-more-btn" (click)="loadWidgetsBatch(currentUser.uid)">
+    Load More
+  </button>
+</div>
+
+</div>
+
 
 <!-- Modal remains unchanged -->
 <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -85,3 +104,31 @@
     </div>
   </div>
 </div>
+<!-- Modal for Chat Title -->
+<div #titleModalRef class="modal fade" id="titleModal" tabindex="-1" aria-labelledby="titleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="titleModalLabel">Title Your Saved Chat</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Enter chat title"
+          [(ngModel)]="chatTitle"
+        />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" (click)="saveChatWithModal()" data-bs-dismiss="modal">
+          Save Chat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

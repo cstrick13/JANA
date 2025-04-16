@@ -7,6 +7,23 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 import hljs from 'highlight.js';
+import { addDoc, collection, getDocs, limit, orderBy, query, serverTimestamp, startAfter, Timestamp, where } from 'firebase/firestore';
+import { AppModule } from '../app.module';
+import { AuthService } from '../auth.service';
+declare var bootstrap: any;
+
+export interface SavedWidget {
+  title: string;
+  messages: ChatMessage[];
+  
+}
+export interface SavedWidget {
+  title: string;
+  messages: ChatMessage[];
+  savedAt?: any;        // Firestore Timestamp (serverTimestamp())
+  localSavedAt?: Date;  // A client-side timestamp for immediate UI display
+}
+
 
 @Component({
   selector: 'app-jana',
@@ -16,18 +33,28 @@ import hljs from 'highlight.js';
 })
 export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('rightSidenav') rightSidenav!: ElementRef;
+  public showLoadMoreButton: boolean = false;
   private currentSound?: THREE.Audio;
   public isRecording = false;
   public isWaitingForAgent = false;
+  public canLoadMore: boolean = false;
+
+  public chatTitle: string = ''; // Holds the title from the modal
+  @ViewChild('titleModalRef') titleModalRef!: ElementRef;
   constructor(
     public wizardConfigService: WizardConfigService,
-    private router: Router
+    private router: Router,private authService: AuthService
   ) {}
 
 
 
   
   public isLoading: boolean = false;
+    // For pagination: stores the last document from the last batch
+  private lastChatDoc: any = null;  
+    // Number of chats to load in each batch
+  private batchSize: number = 30;  
 
   
 
@@ -47,7 +74,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     u_resolution: { value: new THREE.Vector2(800, 800) },
     u_frequency: {value: 0.0},
     u_isRecording: { value: 0.0 }
-  };
+  };  public savedWidgets: SavedWidget[] = [];
 
   /** 
    * Flag to detect if we're dealing with a short clip. 
@@ -55,14 +82,28 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
    */
   private isShortClip = false;
   public chatMessages: ChatMessage[] = [];
+  
   public newChatMessage: string = '';
 
+  currentUser: any = null;
+
   ngOnInit() {
-    console.log('User Name:', this.wizardConfigService.userName);
-    console.log('Command Word:', this.wizardConfigService.commandWord);
-    console.log('Wizard Finished:', this.wizardConfigService.wizardFinished);
-    console.log('Audio Src:', this.wizardConfigService.selectedAudioSrc);
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      if (user && user.uid) {
+        // Reset pagination marker for a fresh load
+        this.lastChatDoc = null;
+        this.savedWidgets = [];
+        // Load the first batch of chats (today and older together)
+        this.loadWidgetsBatch(user.uid);
+      } else {
+        this.savedWidgets = [];
+      }
+    });
   }
+  
+  
+  
 
   ngAfterViewInit(): void {
     this.initThree();
@@ -87,6 +128,213 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       this.newChatMessage = '';
     }
   }
+
+  
+
+
+  async saveChatWithModal(): Promise<void> {
+    if (!this.currentUser || !this.currentUser.uid) {
+      console.error('User not logged in');
+      return;
+    }
+  
+    // Make a deep copy of the chat messages
+    const messagesCopy = this.chatMessages.map(msg => ({ ...msg }));
+    // Use the entered chat title or fall back to a default
+    const title = this.chatTitle.trim() || `Chat saved on ${new Date().toLocaleString()}`;
+    // Create a local timestamp for immediate UI display
+    const localTimestamp = new Date();
+  
+    // Create chat data; note that serverTimestamp() will be filled later by Firestore
+    const chatData: SavedWidget = {
+      title,
+      messages: messagesCopy,
+      savedAt: serverTimestamp(),  // This is only a sentinel until you re-fetch from Firestore
+      localSavedAt: localTimestamp // Use this immediately in the UI for grouping
+    };
+  
+    try {
+      // Save the chat to Firestore under the user's "chats" subcollection
+      const userChatsCollection = collection(AppModule.db, 'users', this.currentUser.uid, 'chats');
+      await addDoc(userChatsCollection, chatData);
+      console.log('Chat saved successfully for user:', this.currentUser.uid);
+      
+      // Immediately update local UI arrays:
+      this.savedWidgets.push(chatData);
+      this.groupChatsByDay();
+    } catch (error) {
+      console.error('Error saving chat:', error);
+    }
+  
+    // Programmatically close the modal
+    const modalEl = this.titleModalRef.nativeElement;
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+  
+    // Clear the chatTitle for the next save
+    this.chatTitle = '';
+  }
+
+  onScroll(event: any): void {
+    const element = event.target;
+    const threshold = 50; // When 50px from the bottom
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - threshold) {
+      // Only call if a user is logged in and there might be more to load
+      if (this.currentUser && this.currentUser.uid) {
+        this.loadWidgetsBatch(this.currentUser.uid);
+      }
+    }
+  }
+  
+  
+  public groupedWidgets: { [label: string]: SavedWidget[] } = {};
+  private groupChatsByDay(): void {
+    this.groupedWidgets = {};
+    for (const widget of this.savedWidgets) {
+      // Log out the computed label for each widget.
+      const label = this.getDayLabel(widget.savedAt, widget.localSavedAt);
+      console.log('Widget title:', widget.title, 'Group label:', label);
+      if (!this.groupedWidgets[label]) {
+        this.groupedWidgets[label] = [];
+      }
+      this.groupedWidgets[label].push(widget);
+    }
+    console.log("Grouped Widgets:", this.groupedWidgets);
+  }
+  
+  private getDayLabel(timestamp: any, localTimestamp?: Date): string {
+    let dateObj: Date | null = null;
+  
+    if (timestamp && typeof timestamp === 'string') {
+      dateObj = new Date(timestamp);
+    } else if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+      dateObj = timestamp.toDate();
+    } else if (localTimestamp) {
+      dateObj = localTimestamp;
+    }
+  
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      return 'No Date';
+    }
+  
+    const now = new Date();
+    // Adjust according to your desired grouping method (local or UTC)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const chatDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const diffInMs = startOfToday.getTime() - chatDay.getTime();
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+  
+    if (diffInDays === 0) {
+      return 'Today';
+    } else if (diffInDays === 1) {
+      return 'Yesterday';
+    } else if (diffInDays > 1 && diffInDays <= 7) {
+      return 'Previous 7 Days';
+    } else {
+      return 'Older';
+    }
+  }
+  
+  
+  
+
+
+  public getGroupLabels(): string[] {
+    const labels = Object.keys(this.groupedWidgets);
+    const customOrder: { [key: string]: number } = {
+      'Today': 1,
+      'Yesterday': 2,
+      'Previous 7 Days': 3,
+      'Older': 4,
+      'No Date': 99
+    };
+  
+    return labels.sort((a, b) => {
+      // If a label isn’t defined, give it a high value
+      const orderA = customOrder[a] || 100;
+      const orderB = customOrder[b] || 100;
+      return orderA - orderB;
+    });
+  }
+  
+
+
+
+  
+  
+  
+  
+
+  loadWidget(widget: SavedWidget): void {
+    // Optionally, clear current chat messages first:
+    this.chatMessages = [];
+  
+    // Push each saved message back into the chatMessages array
+    widget.messages.forEach(msg => {
+      this.chatMessages.push({ ...msg });
+    });
+  }
+
+  async loadWidgetsBatch(uid: string): Promise<void> {
+    try {
+      const chatsCollectionRef = collection(AppModule.db, 'users', uid, 'chats');
+      let q;
+      if (this.lastChatDoc) {
+        q = query(
+          chatsCollectionRef,
+          orderBy('savedAt', 'desc'),
+          startAfter(this.lastChatDoc),
+          limit(this.batchSize)
+        );
+      } else {
+        q = query(
+          chatsCollectionRef,
+          orderBy('savedAt', 'desc'),
+          limit(this.batchSize)
+        );
+      }
+  
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // Update your pagination marker with the last document
+        this.lastChatDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+        
+        // Set canLoadMore flag: if we got the full batch, assume there are more chats available.
+        this.canLoadMore = (querySnapshot.size === this.batchSize);
+  
+        const newWidgets = querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            title: data['title'],
+            messages: data['messages'],
+            savedAt: data['savedAt']
+          } as SavedWidget;
+        });
+  
+        console.log("New Widgets Batch:", newWidgets);
+        this.savedWidgets.push(...newWidgets);
+        this.groupChatsByDay();
+      } else {
+        console.log("No more chats to load.");
+        this.canLoadMore = false;
+      }
+    } catch (error) {
+      console.error('Error fetching saved chat widgets:', error);
+    }
+  }
+  
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
 
   
 

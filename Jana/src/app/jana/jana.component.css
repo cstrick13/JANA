@@ -9,6 +9,32 @@
   position: relative;
 }
 
+.widget-bar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 200px;
+  background: #1e1e1e;
+  padding: 1rem;
+  border-left: 1px solid #333;
+  height: 100vh;
+}
+.widget-bar h5 {
+  color: #ccc;
+}
+.widget-bar button {
+  display: block;
+  margin-bottom: 10px;
+  width: 100%;
+  background-color: #2c2c2c;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+
 /***********************************************
   Scrollable Messages Container
 ***********************************************/
@@ -414,4 +440,83 @@
   font-weight: 600;
   margin-left: 0.5rem;
 }
+
+/* Right Sidebar Container */
+.right-sidenav {
+  position: fixed;
+  right: 0;
+  top: 60px; 
+  width: 13rem;      /* Adjust width as needed */
+  height: calc(100vh - 60px);      /* Full viewport height */
+  background: #181d22; /* Background color */
+  border-left: 1px solid #2b2b2b; /* Border on the left side */
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.2); /* Soft shadow on the left */
+  overflow-y: scroll;  /* Scroll if content overflows */
+  padding: 1rem;       /* Internal padding */
+  transition: all 0.5s ease;
+  font-size: medium;
+
+
+}
+
+/* Group Title Styling */
+/* For the group label headings */
+.right-sidenav h3 {
+  color: #fff;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: .8rem;
+  text-align: right;
+}
+
+/* For the widget buttons */
+.right-sidenav button {
+  display: block;
+  width: 100%;
+  background: transparent;  /* No bubble by default */
+  border: none;
+  color: #f3f1f1;
+  padding: 0.5rem;
+  text-align: right;
+  cursor: pointer;
+  margin: 0.25rem 0;  /* Minimal spacing if desired */
+  border-radius: 4px; /* Only visible on hover if a background is applied */
+  transition: background 0.3s, color 0.3s;
+}
+
+/* On hover, show a dark “highlight” bubble */
+.right-sidenav button:hover {
+  background: #2a2a2a; /* or any dark color you like */
+  color: #fff;         /* ensure text is visible against dark hover */
+}
+
+.load-more-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #348cff, #1c79d2);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.load-more-btn:hover {
+  background: linear-gradient(135deg, #2a78c7, #1664a9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.20);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.15);
+}
+
+
 
