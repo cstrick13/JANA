@@ -51,6 +51,14 @@
 
 <!-- Widget Bar for Saved Chats -->
 <div class="right-sidenav" #rightSidenav (scroll)="onScroll($event)">
+  <div class="top-controls">
+    <!-- Clear Chat Icon -->
+    <i class="fa fa-trash clear-chat-icon" title="Clear Chat" (click)="clearChatMessages()"></i>
+    <!-- Search Icon triggers the search modal -->
+    <i class="fa fa-search search-chat-icon" title="Search Chats" data-bs-toggle="modal" data-bs-target="#searchChatsModal"></i>
+  </div>
+
+  <!-- Grouped Saved Widgets -->
   <div *ngFor="let groupLabel of getGroupLabels()">
     <h3>{{ groupLabel }}</h3>
     <div *ngFor="let widget of groupedWidgets[groupLabel]">
@@ -59,14 +67,105 @@
       </button>
     </div>
   </div>
-
-  <!-- Show the Load More button if either the content doesn't overflow OR if we know there's more (canLoadMore) -->
+  <!-- Load More Button: optional, shown if canLoadMore is true -->
   <button *ngIf="canLoadMore" class="load-more-btn" (click)="loadWidgetsBatch(currentUser.uid)">
     Load More
   </button>
 </div>
 
 </div>
+
+<!-- Search Chats Modal -->
+<!-- Search Chats Modal -->
+<div class="modal fade" id="searchChatsModal" tabindex="-1" aria-labelledby="searchChatsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content search-modal-content">
+      <!-- Modal Header with Search Input -->
+      <div class="search-modal-header">
+        <input
+          type="text"
+          class="form-control search-input"
+          placeholder="Search chats by title..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="applyWidgetSearch()"
+        />
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close">
+        </button>
+      </div>
+      
+      <!-- Modal Body: Display results -->
+      <div class="search-modal-body">
+        <ul class="chat-search-list">
+          <!-- If a search term is entered, show filtered results -->
+          <ng-container *ngIf="searchTerm.trim().length > 0; else groupedChats">
+            <li
+              class="chat-search-item"
+              *ngFor="let widget of filteredSearchResults"
+              (click)="openWidget(widget)"
+              data-bs-dismiss="modal">
+              <i class="fa fa-comments"></i>
+              <span>{{ widget.title }}</span>
+            </li>
+            <li *ngIf="filteredSearchResults.length === 0">
+              <p>No matching chats found.</p>
+            </li>
+          </ng-container>
+          
+          <!-- Grouped Chats if no search term is present -->
+          <ng-template #groupedChats>
+            <!-- "New chat" Item -->
+            <li class="chat-search-item new-chat" (click)="startNewChat()" data-bs-dismiss="modal">
+              <i class="fa fa-plus-circle"></i>
+              <span>New chat</span>
+            </li>
+            <!-- Group for Today -->
+            <li class="chat-search-heading">Today</li>
+            <li
+              class="chat-search-item"
+              *ngFor="let widget of getWidgetsByLabel('Today')"
+              (click)="openWidget(widget)" data-bs-dismiss="modal">
+              <i class="fa fa-comments"></i>
+              <span>{{ widget.title }}</span>
+            </li>
+            <!-- Group for Yesterday -->
+            <li class="chat-search-heading">Yesterday</li>
+            <li
+              class="chat-search-item"
+              *ngFor="let widget of getWidgetsByLabel('Yesterday')"
+              (click)="openWidget(widget)" data-bs-dismiss="modal">
+              <i class="fa fa-comments"></i>
+              <span>{{ widget.title }}</span>
+            </li>
+            <!-- Group for Previous 7 Days -->
+            <li class="chat-search-heading">Previous 7 Days</li>
+            <li
+              class="chat-search-item"
+              *ngFor="let widget of getWidgetsByLabel('Previous 7 Days')"
+              (click)="openWidget(widget)" data-bs-dismiss="modal">
+              <i class="fa fa-comments"></i>
+              <span>{{ widget.title }}</span>
+            </li>
+            <!-- Group for Older -->
+            <li class="chat-search-heading">Older</li>
+            <li
+              class="chat-search-item"
+              *ngFor="let widget of getWidgetsByLabel('Older')"
+              (click)="openWidget(widget)" data-bs-dismiss="modal">
+              <i class="fa fa-comments"></i>
+              <span>{{ widget.title }}</span>
+            </li>
+          </ng-template>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 
 <!-- Modal remains unchanged -->
@@ -106,7 +205,7 @@
 </div>
 <!-- Modal for Chat Title -->
 <div #titleModalRef class="modal fade" id="titleModal" tabindex="-1" aria-labelledby="titleModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="titleModalLabel">Title Your Saved Chat</h5>

@@ -431,6 +431,91 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     
     return processedText;
   }
+
+  public searchTerm: string = '';
+public filteredSearchResults: SavedWidget[] = [];
+
+// Called when user types in the search input
+applyWidgetSearch(): void {
+  if (!this.searchTerm || this.searchTerm.trim().length === 0) {
+    // No search term: clear the results
+    this.filteredSearchResults = [];
+    return;
+  }
+
+  const term = this.searchTerm.toLowerCase();
+
+  // Flatten all widgets from groupedWidgets, or use savedWidgets directly
+  // If you prefer searching among all savedWidgets (not grouped), just do:
+  // this.filteredSearchResults = this.savedWidgets.filter( ... );
+  
+  // Flatten grouped widgets
+  const allWidgets: SavedWidget[] = [];
+  for (const groupLabel of Object.keys(this.groupedWidgets)) {
+    allWidgets.push(...this.groupedWidgets[groupLabel]);
+  }
+
+  // Filter by title
+  this.filteredSearchResults = allWidgets.filter(widget =>
+    widget.title.toLowerCase().includes(term)
+  );
+}
+
+// Called when user clicks a search result in the modal
+openWidget(widget: SavedWidget): void {
+  // If you want to close the modal:
+  const modalEl = document.getElementById('searchModal');
+  if (modalEl) {
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+  }
+
+  // Clear current chat messages if that’s your logic:
+  this.chatMessages = [];
+
+  // Load this widget's messages
+  widget.messages.forEach(msg => {
+    this.chatMessages.push({ ...msg });
+  });
+
+  // Optionally persist new chatMessages
+  this.persistChatMessages();
+  
+  console.log('Opened widget:', widget.title);
+}
+
+public getWidgetsByLabel(label: string): SavedWidget[] {
+  // If you use groupedWidgets:
+  return this.groupedWidgets[label] || [];
+}
+
+public startNewChat(): void {
+  // Close the modal (if you like):
+  const modalEl = document.getElementById('searchChatsModal');
+  if (modalEl) {
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+  }
+  // Clear existing chat:
+  this.chatMessages = [];
+  // Optionally, persist:
+  this.persistChatMessages();
+}
+
+clearChatMessages(): void {
+  // 1) Clear in-memory chat messages
+  this.chatMessages = [];
+
+  // 2) Persist the new (empty) state to Tauri
+  this.persistChatMessages();
+  
+  console.log('All chat messages cleared.');
+}
+
   
   
 

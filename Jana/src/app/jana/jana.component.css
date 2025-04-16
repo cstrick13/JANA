@@ -519,4 +519,179 @@
 }
 
 
+/* Top controls with clear and search icons */
+.top-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Add some spacing between each icon */
+.top-controls i {
+  font-size: 1.2rem;
+  color: #ffffff;
+  cursor: pointer;
+  transition: color 0.3s;
+  margin-left: 1rem; /* Adjust spacing as needed */
+}
+
+.top-controls i:first-child {
+  margin-left: 0; /* Remove left margin on the first icon if desired */
+}
+
+.top-controls i:hover {
+  color: #f44;
+}
+
+
+.clear-chat-icon, .search-chat-icon {
+  font-size: 1.2rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.3s;
+  margin-left: 0.5rem;
+}
+
+.clear-chat-icon:hover, .search-chat-icon:hover {
+  color: #f44;
+}
+
+/* Search Modal specific styles */
+.search-input-container {
+  margin-bottom: 1rem;
+}
+
+.search-results ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.search-result-item {
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #2a2a2a;
+  color: #fff;
+  transition: background 0.3s;
+}
+
+.search-result-item:hover {
+  background: #348cff;
+}
+
+/* Dark, minimal modal content */
+/* Search Modal Content */
+.search-modal-content {
+  background-color: #2a2a2a;
+  border: none;
+  border-radius: 0.5rem;
+  color: #fff;
+}
+
+.search-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #444;
+  background: #2a2a2a; /* Optional: same color as modal if you want it fully blended */
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.search-modal-header .modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.search-modal-body {
+  padding: 1rem;
+}
+.search-input {
+  flex: 1;
+  margin-right: 0.5rem;
+  padding: 0.5rem;
+  border: none;               /* Remove default border */
+  background-color: #2a2a2a;  /* Or #1e1e22—something that matches your modal */
+  color: #fff;                /* Ensure text is visible */
+  font-size: 1rem;
+  border-radius: 4px;         /* So it looks a bit smoother */
+}
+
+.search-input::placeholder {
+  color: #aaa; /* Subtle placeholder text */
+}
+
+.search-input:focus {
+  outline: none;        /* Remove browser’s default focus outline */
+  border: 1px solid #444; /* If you want a subtle border on focus */
+}
+
+/* Search Input Container */
+.search-input-container {
+  margin-bottom: 1rem;
+}
+
+.search-input-container input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #1e1e22;
+  color: #fff;
+}
+
+.search-input-container input::placeholder {
+  color: #aaa;
+}
+
+/* Search Results List */
+.chat-search-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chat-search-heading {
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ccc;
+  border-bottom: 1px solid #444;
+  margin-top: 1rem;
+}
+
+.chat-search-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #2a2a2a;
+  color: #fff;
+  transition: background 0.3s;
+}
+
+.chat-search-item:hover {
+  background: #348cff;
+}
+
+.chat-search-item i {
+  margin-right: 0.75rem;
+  color: #ccc;
+}
+
+/* Style for New Chat item */
+.new-chat {
+  border-bottom: 1px solid #444;
+  margin-bottom: 0.75rem;
+}
+
+
+
+
 
