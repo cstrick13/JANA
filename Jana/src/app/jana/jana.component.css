@@ -610,6 +610,10 @@
 .search-modal-body {
   padding: 1rem;
 }
+.search-modal-body {
+  overflow-y: auto;
+}
+
 .search-input {
   flex: 1;
   margin-right: 0.5rem;
