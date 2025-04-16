@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 import hljs from 'highlight.js';
-import { addDoc, collection, getDocs, limit, orderBy, query, serverTimestamp, startAfter, Timestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAfter, Timestamp, where } from 'firebase/firestore';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth.service';
 import { invoke } from '@tauri-apps/api/core';
@@ -19,6 +19,7 @@ export interface SavedWidget {
   
 }
 export interface SavedWidget {
+  id?: string;          // Added widget (document) id from Firestore
   title: string;
   messages: ChatMessage[];
   savedAt?: any;        // Firestore Timestamp (serverTimestamp())
@@ -108,6 +109,18 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         console.error('Error reading chat messages from Tauri storage:', err);
         this.chatMessages = [];
       });
+
+        // Also restore the selected chat id from local storage
+  invoke<string>('get_local_storage', { key: 'currentWidgetId' })
+  .then((savedId: string | null) => {
+    if (savedId && savedId.trim().length > 0) {
+      this.currentWidgetId = savedId;
+      console.log('Restored current widget id from local storage:', this.currentWidgetId);
+    }
+  })
+  .catch(err => {
+    console.error('Error restoring currentWidgetId from Tauri storage:', err);
+  });
       
     // Also load user info and saved widgets, as needed
     this.authService.currentUser$.subscribe(user => {
@@ -141,15 +154,84 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       cancelAnimationFrame(this.animationId);
     }
   }
-  sendChatMessage() {
-    if (this.newChatMessage.trim()) {
-      this.chatMessages.push({ sender: 'user', content: this.newChatMessage });
-      // Instead of simulating a response, call the agent:
-      this.sendToAgent(this.newChatMessage);
-      this.newChatMessage = '';
-      this.persistChatMessages();
+
+  async createNewWidgetIfNeeded(firstMessage: string): Promise<void> {
+    if (!this.currentUser || !this.currentUser.uid) {
+      console.error('User not logged in.');
+      return Promise.reject('User not logged in');
+    }
+    if (this.currentWidgetId) {
+      // Widget already exists; nothing to do
+      return;
+    }
+    
+    // Use the first user message as the title (truncated to a maximum length if needed)
+    const title = firstMessage.trim().slice(0, 50); // For example, first 50 characters
+    const widgetData: SavedWidget = {
+      title: title,
+      messages: this.chatMessages,
+      savedAt: serverTimestamp(),   // For final Firestore value
+      localSavedAt: new Date()        // For immediate UI grouping
+    };
+    
+    // Define the chats collection reference first:
+    const userChatsCollection = collection(AppModule.db, 'users', this.currentUser.uid, 'chats');
+    
+    try {
+      // Create a new document on Firestore.
+      const docRef = await addDoc(userChatsCollection, widgetData);
+      // Save the created document's id to the component state.
+      this.currentWidgetId = docRef.id;
+      console.log('New widget created with ID:', this.currentWidgetId);
+      
+      // Immediately update your local UI: unshift the new widget into the savedWidgets array.
+      this.savedWidgets.unshift({ ...widgetData, id: this.currentWidgetId });
+      // Regroup the widgets so the new one appears in the right group (e.g. "Today").
+      this.groupChatsByDay();
+      
+      // Optionally, log the updated UI state:
+      console.log('Updated savedWidgets:', this.savedWidgets);
+      console.log('Grouped widgets:', this.groupedWidgets);
+    } catch (err) {
+      console.error('Error creating new widget:', err);
+      return Promise.reject(err);
     }
   }
+  
+  sendChatMessage(): void {
+    if (this.newChatMessage.trim()) {
+      // Create the user message object.
+      const userMessage: ChatMessage = { sender: 'user', content: this.newChatMessage };
+      
+      // Add the user message to chatMessages.
+      this.chatMessages.push(userMessage);
+      
+      // If no active widget exists, create a new one.
+      if (!this.currentWidgetId) {
+        this.createNewWidgetIfNeeded(this.newChatMessage)
+          .then(() => {
+            // Now that the widget is created, send the message to the agent.
+            this.sendToAgent(this.newChatMessage);
+            // Auto-update the widget in Firestore.
+            this.persistActiveWidgetToFirebase();
+            this.persistChatMessages(); // local persistence if needed
+          })
+          .catch(err => {
+            console.error('Error creating widget for new chat:', err);
+          });
+      } else {
+        // If a widget already exists, proceed as normal:
+        this.sendToAgent(this.newChatMessage);
+        console.log('Calling persistActiveWidgetToFirebase() after updating messages');
+        this.persistActiveWidgetToFirebase();
+        this.persistChatMessages();
+      }
+      
+      // Clear the input field.
+      this.newChatMessage = '';
+    }
+  }
+  
 
   
 
@@ -298,23 +380,106 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   }
   
 
+  persistActiveWidgetToFirebase(): void {
+    if (!this.currentUser || !this.currentUser.uid) {
+      console.error('Cannot update chat: user not logged in.');
+      return;
+    }
+    if (!this.currentWidgetId) {
+      console.warn('No active widget ID found; chat not saved to Firebase.');
+      return;
+    }
+    
+    console.log(`Updating widget ${this.currentWidgetId} with messages:`, this.chatMessages);
+    
+    // Reference the active widget document.
+    const widgetDocRef = doc(AppModule.db, 'users', this.currentUser.uid, 'chats', this.currentWidgetId);
+    const updatedData = {
+      messages: this.chatMessages,
+      updatedAt: serverTimestamp()  // Update the last updated time
+    };
+  
+    setDoc(widgetDocRef, updatedData, { merge: true })
+      .then(() => {
+        console.log('Active widget chat auto-updated in Firestore.');
+      })
+      .catch(err => {
+        console.error('Error auto-updating chat in Firestore:', err);
+      });
+  }
+  
+  
+  
 
 
+
   
   
+  refreshChats(): void {
+    if (!this.currentUser || !this.currentUser.uid) {
+      console.warn('No user logged in, cannot refresh chats.');
+      return;
+    }
+    // Optionally reset pagination to fetch from the beginning
+    this.lastChatDoc = null;
+    this.savedWidgets = [];
+  
+    this.loadWidgetsBatch(this.currentUser.uid)
+      .then(() => {
+        console.log('Chats refreshed successfully.');
+      })
+      .catch(error => {
+        console.error('Error refreshing chats:', error);
+      });
+  }
   
   
 
+  public currentWidgetId: string | null = null;
   loadWidget(widget: SavedWidget): void {
-    // Optionally, clear current chat messages first:
+    console.log('Loading widget:', widget);
+    
+    // Clear the current chat messages
     this.chatMessages = [];
-  
-    // Push each saved message back into the chatMessages array
+    
+    // Update the current widget id if available
+    if (widget.id) {
+      this.currentWidgetId = widget.id;
+      console.log('Current widget id set to:', this.currentWidgetId);
+      // Persist the selected chat id to local storage
+      this.persistSelectedChatId();
+    } else {
+      console.warn('Widget has no id, setting currentWidgetId to null');
+      this.currentWidgetId = null;
+      // Remove it from storage if necessary
+      this.persistSelectedChatId();
+    }
+    
+    // Load widget messages
     widget.messages.forEach(msg => {
       this.chatMessages.push({ ...msg });
     });
     this.persistChatMessages();
+  
+    // Optionally, refresh the list to verify newest updates
+    this.refreshChats();
   }
+
+  persistSelectedChatId(): void {
+    try {
+      // Use Tauri's storage method to save the current widget id
+      invoke('set_local_storage', { key: 'currentWidgetId', value: this.currentWidgetId || '' })
+        .then(() => console.log('Selected chat id saved to local storage'))
+        .catch((err: any) => console.error('Error saving currentWidgetId:', err));
+    } catch (e) {
+      console.error('Error in persistSelectedChatId:', e);
+    }
+  }
+  
+  
+  
+  
+
 
   async loadWidgetsBatch(uid: string): Promise<void> {
     try {
@@ -346,11 +511,13 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
         const newWidgets = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
           return {
+            id: docSnap.id,  // Save the document's id here
             title: data['title'],
             messages: data['messages'],
             savedAt: data['savedAt']
           } as SavedWidget;
         });
+        
   
         console.log("New Widgets Batch:", newWidgets);
         this.savedWidgets.push(...newWidgets);
@@ -502,6 +669,7 @@ public startNewChat(): void {
   }
   // Clear existing chat:
   this.chatMessages = [];
+  this.clearSelectedChatId();
   // Optionally, persist:
   this.persistChatMessages();
 }
@@ -511,9 +679,21 @@ clearChatMessages(): void {
   this.chatMessages = [];
 
   // 2) Persist the new (empty) state to Tauri
+  this.clearSelectedChatId();
   this.persistChatMessages();
   
   console.log('All chat messages cleared.');
+}
+
+
+clearSelectedChatId(): void {
+  // Clear the in-memory value.
+  this.currentWidgetId = null;
+  
+  // Persist a blank value (or remove the key) from local storage.
+  invoke('set_local_storage', { key: 'currentWidgetId', value: '' })
+    .then(() => console.log('Cleared currentWidgetId from local storage'))
+    .catch((err: any) => console.error('Error clearing currentWidgetId:', err));
 }
 
   
@@ -575,6 +755,8 @@ clearChatMessages(): void {
       
       // Push the final agent reply into the chat
       this.chatMessages.push({ sender: 'ai', content: finalReply });
+      console.log('Calling persistActiveWidgetToFirebase() after updating messages');
+      this.persistActiveWidgetToFirebase();
       this.persistChatMessages();
       
     } catch (error) {

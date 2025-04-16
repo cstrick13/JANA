@@ -489,6 +489,10 @@
   background: #2a2a2a; /* or any dark color you like */
   color: #fff;         /* ensure text is visible against dark hover */
 }
+button.active-chat {
+  background-color: #2a2a2a !important;
+}
+
 
 .load-more-btn {
   display: block;
@@ -522,7 +526,7 @@
 /* Top controls with clear and search icons */
 .top-controls {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
 }
@@ -543,6 +547,17 @@
 .top-controls i:hover {
   color: #f44;
 }
+.create-new-container {
+  order: 0;
+  margin-right: auto;
+}
+.search-chat-icon {
+  order: 1;
+}
+
+/* jana.component.css */
+
+
 
 
 .clear-chat-icon, .search-chat-icon {

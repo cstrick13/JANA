@@ -43,18 +43,17 @@
     <button class="send-btn" (click)="sendChatMessage()">
       <i class="fa fa-paper-plane"></i>
     </button>
-    <button class="send-btn" data-bs-toggle="modal" data-bs-target="#titleModal">
-      <i class="fa fa-save"></i>
-    </button>
   </div>
 </div>
 
 <!-- Widget Bar for Saved Chats -->
 <div class="right-sidenav" #rightSidenav (scroll)="onScroll($event)">
   <div class="top-controls">
-    <!-- Clear Chat Icon -->
-    <i class="fa fa-trash clear-chat-icon" title="Clear Chat" (click)="clearChatMessages()"></i>
-    <!-- Search Icon triggers the search modal -->
+    <!-- Create New Chat Icon moved to the left -->
+    <div class="create-new-container">
+      <i class="fa fa-plus-circle create-chat-icon" title="New Chat" (click)="startNewChat()"></i>
+    </div>
+    <!-- Search Icon remains on the right -->
     <i class="fa fa-search search-chat-icon" title="Search Chats" data-bs-toggle="modal" data-bs-target="#searchChatsModal"></i>
   </div>
 
@@ -62,12 +61,13 @@
   <div *ngFor="let groupLabel of getGroupLabels()">
     <h3>{{ groupLabel }}</h3>
     <div *ngFor="let widget of groupedWidgets[groupLabel]">
-      <button (click)="loadWidget(widget)">
+      <button (click)="loadWidget(widget)" [class.active-chat]="widget.id === currentWidgetId">
         {{ widget.title }}
       </button>
     </div>
   </div>
-  <!-- Load More Button: optional, shown if canLoadMore is true -->
+  
+  <!-- Load More Button (optional) -->
   <button *ngIf="canLoadMore" class="load-more-btn" (click)="loadWidgetsBatch(currentUser.uid)">
     Load More
   </button>
