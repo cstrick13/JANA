@@ -40,22 +40,21 @@ class TaskRequest(BaseModel):
 
 @app.post("/run_task")
 async def run_task_route(task_request: TaskRequest):
-    if not task_request.task:
+    task = task_request.task
+    if not task:
         print("No task provided")
         raise HTTPException(status_code=400, detail="No task provided")
     history: List[LLMMessage] = []
     context = task_request.history
-    print(context)
     for message in context:
-        print(f"Message: {message}")
         if message["sender"] == "user":
             history.append(UserMessage(content=message["content"], source="user"))
         else:
             history.append(AssistantMessage(content=message["content"], source=switch_admin_agent_topic_type))
-    print(f"Running task: {context}")
+    print(f"Running task: {task}")
 
 
-    response = await chat(task=task_request.task, history=history)
+    response = await chat(task=task, history=history)
     return response
 
 
