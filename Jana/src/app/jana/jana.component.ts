@@ -199,38 +199,41 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   }
   
   sendChatMessage(): void {
-    if (this.newChatMessage.trim()) {
-      // Create the user message object.
-      const userMessage: ChatMessage = { sender: 'user', content: this.newChatMessage };
-      
-      // Add the user message to chatMessages.
-      this.chatMessages.push(userMessage);
-      
-      // If no active widget exists, create a new one.
-      if (!this.currentWidgetId) {
-        this.createNewWidgetIfNeeded(this.newChatMessage)
-          .then(() => {
-            // Now that the widget is created, send the message to the agent.
-            this.sendToAgent(this.newChatMessage);
-            // Auto-update the widget in Firestore.
-            this.persistActiveWidgetToFirebase();
-            this.persistChatMessages(); // local persistence if needed
-          })
-          .catch(err => {
-            console.error('Error creating widget for new chat:', err);
-          });
-      } else {
-        // If a widget already exists, proceed as normal:
-        this.sendToAgent(this.newChatMessage);
-        console.log('Calling persistActiveWidgetToFirebase() after updating messages');
-        this.persistActiveWidgetToFirebase();
-        this.persistChatMessages();
-      }
-      
-      // Clear the input field.
-      this.newChatMessage = '';
+    // Don’t even try to send if there’s no text
+    if (!this.newChatMessage.trim()) return;
+  
+    // If chatMessages is empty ⟶ brand-new chat, so clear any old widget ID
+    if (this.chatMessages.length === 0 && this.currentWidgetId) {
+      console.log('First message in new chat, clearing old widget ID');
+      this.clearSelectedChatId();
     }
+  
+    // Now go on and actually push the user message
+    const userMessage: ChatMessage = {
+      sender: 'user',
+      content: this.newChatMessage.trim()
+    };
+    this.chatMessages.push(userMessage);
+  
+    // And then handle widget creation vs. existing widget
+    if (!this.currentWidgetId) {
+      this.createNewWidgetIfNeeded(userMessage.content)
+        .then(() => {
+          this.sendToAgent(userMessage.content);
+          this.persistActiveWidgetToFirebase();
+          this.persistChatMessages();
+        })
+        .catch(err => console.error(err));
+    } else {
+      this.sendToAgent(userMessage.content);
+      this.persistActiveWidgetToFirebase();
+      this.persistChatMessages();
+    }
+  
+    // Clear the input for the next message
+    this.newChatMessage = '';
   }
+  
   
 
   
@@ -687,14 +690,11 @@ clearChatMessages(): void {
 
 
 clearSelectedChatId(): void {
-  // Clear the in-memory value.
   this.currentWidgetId = null;
-  
-  // Persist a blank value (or remove the key) from local storage.
   invoke('set_local_storage', { key: 'currentWidgetId', value: '' })
-    .then(() => console.log('Cleared currentWidgetId from local storage'))
-    .catch((err: any) => console.error('Error clearing currentWidgetId:', err));
+    .catch(err => console.error('Error clearing widgetId:', err));
 }
+
 
   
   
