@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WizardConfigService } from '../wizard-config.service';
 import { FormsModule } from '@angular/forms';
 import hljs from 'highlight.js';
-import { addDoc, collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAfter, Timestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAfter, Timestamp, where } from 'firebase/firestore';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth.service';
 import { invoke } from '@tauri-apps/api/core';
@@ -57,6 +57,10 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   private lastChatDoc: any = null;  
     // Number of chats to load in each batch
   private batchSize: number = 30;  
+  // Inside JanaComponent:
+public jsonDownloadUrl: string | null = null;
+public jsonDownloadName: string   = '';
+
 
   
 
@@ -439,33 +443,51 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   
 
   public currentWidgetId: string | null = null;
-  loadWidget(widget: SavedWidget): void {
+  async loadWidget(widget: SavedWidget): Promise<void> {
     console.log('Loading widget:', widget);
-    
-    // Clear the current chat messages
+  
+    // 1) Clear the current UI
     this.chatMessages = [];
-    
-    // Update the current widget id if available
+  
+    // 2) Set & persist the active widget ID
     if (widget.id) {
       this.currentWidgetId = widget.id;
       console.log('Current widget id set to:', this.currentWidgetId);
-      // Persist the selected chat id to local storage
       this.persistSelectedChatId();
     } else {
-      console.warn('Widget has no id, setting currentWidgetId to null');
-      this.currentWidgetId = null;
-      // Remove it from storage if necessary
-      this.persistSelectedChatId();
+      console.warn('Widget has no id, clearing currentWidgetId');
+      this.clearSelectedChatId();
     }
-    
-    // Load widget messages
-    widget.messages.forEach(msg => {
-      this.chatMessages.push({ ...msg });
-    });
+  
+    // 3) Load into the chat window
+    widget.messages.forEach(msg => this.chatMessages.push({ ...msg }));
     this.persistChatMessages();
   
-    // Optionally, refresh the list to verify newest updates
+    // 4) (Optional) refresh the list if you need it
     this.refreshChats();
+  
+    // 5) Fetch the Firestore record
+    if (this.currentWidgetId && this.currentUser?.uid) {
+      const ref = doc(
+        AppModule.db,
+        'users', this.currentUser.uid,
+        'chats', this.currentWidgetId
+      );
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+  
+      const data   = snap.data();
+      const json   = JSON.stringify(data, null, 2);
+      const blob   = new Blob([json], { type: 'application/json' });
+      const url    = URL.createObjectURL(blob);
+  
+      // Set up a visible link
+      this.jsonDownloadUrl  = url;
+      this.jsonDownloadName = `chat-widget-${this.currentWidgetId}.json`;
+  
+      // (Optional) revoke the old one when you load another widget:
+      // URL.revokeObjectURL(previousUrl);
+    }
   }
 
   persistSelectedChatId(): void {
