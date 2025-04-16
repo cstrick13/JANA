@@ -2,17 +2,12 @@ from typing_extensions import Annotated
 import requests
 import json
 import paramiko
+import time
 
 
 # Used to disable SSL warnings
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
-# Switch information (will be removed in the final version)
-SWITCH_IP = '10.0.150.150'
-USERNAME = 'admin'
-PASSWORD = ''
 
 
 # Constants
@@ -174,6 +169,7 @@ def cli_command(switch_ip: Annotated[str, "The IP address of the switch"],
         print(f"Request timed out at CLI command {command}: {e}")
         return None
 
+
 # SSH command function
 def ssh_command(switch_ip, username, password, command):
     """
@@ -187,6 +183,10 @@ def ssh_command(switch_ip, username, password, command):
     """
 
     try:
+        # if command has a '?' in it, then we need to use the interactive command function
+        if '?' in command:
+            return ssh_interactive_command(switch_ip, username, password, command)
+
         # Initialize SSH client
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # Auto-accept unknown keys
@@ -212,7 +212,49 @@ def ssh_command(switch_ip, username, password, command):
     except Exception as e:
         print(f"An error occurred at SSH command {command}: {e}")
         return None
-    
+
+
+# SSH interactive command function
+def ssh_interactive_command(switch_ip, username, password, command):
+    """
+    Runs a CLI command on an Aruba CX switch using an interactive shell (PTY).
+    Handles CLI features like '?'.
+
+    :param switch_ip: IP address of the switch
+    :param username: SSH username
+    :param password: SSH password
+    :param command: CLI command to execute
+    :return: Command output as a string
+    """
+
+    try:
+        # Initialize SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        # Connect to the switch
+        ssh.connect(switch_ip, username=username, password=password, timeout=TIMEOUT)
+
+        channel = ssh.invoke_shell()
+        channel.settimeout(2)
+
+        time.sleep(1)
+        if channel.recv_ready():
+            channel.recv(9999)
+
+        channel.send(command) 
+
+        time.sleep(2)
+
+        output = ""
+        while channel.recv_ready():
+            output += channel.recv(4096).decode("utf-8")
+
+        ssh.close()
+        return output.strip()
+
+    except Exception as e:
+        return f"Error: {e}"
 
 
 # List of supported CLI commands
