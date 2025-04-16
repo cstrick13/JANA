@@ -102,6 +102,13 @@ export class HeaderComponent {
     }).catch(error => {
       console.error('Error during logout:', error);
     });
+    invoke('set_local_storage', { key: 'chatMessages', value: '' })
+    .then(() => {
+      console.log('Cleared chat messages from Tauri storage');
+    })
+    .catch(err => {
+      console.error('Error clearing chat messages from Tauri storage', err);
+    });
   }
 onSearch(): void {
   if (!this.searchQuery.trim()) { return; }

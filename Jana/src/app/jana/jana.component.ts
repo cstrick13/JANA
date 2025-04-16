@@ -10,6 +10,7 @@ import hljs from 'highlight.js';
 import { addDoc, collection, getDocs, limit, orderBy, query, serverTimestamp, startAfter, Timestamp, where } from 'firebase/firestore';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth.service';
+import { invoke } from '@tauri-apps/api/core';
 declare var bootstrap: any;
 
 export interface SavedWidget {
@@ -88,19 +89,39 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   currentUser: any = null;
 
   ngOnInit() {
+    // Attempt to load the saved chat messages using Tauri storage.
+    invoke<string>('get_local_storage', { key: 'chatMessages' })
+      .then((chatDataStr: string | null) => {
+        if (chatDataStr) {
+          try {
+            this.chatMessages = JSON.parse(chatDataStr);
+            console.log('Restored chat messages from Tauri storage:', this.chatMessages);
+          } catch (error) {
+            console.error('Error parsing chat messages from Tauri storage', error);
+            this.chatMessages = [];
+          }
+        } else {
+          this.chatMessages = [];
+        }
+      })
+      .catch(err => {
+        console.error('Error reading chat messages from Tauri storage:', err);
+        this.chatMessages = [];
+      });
+      
+    // Also load user info and saved widgets, as needed
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       if (user && user.uid) {
-        // Reset pagination marker for a fresh load
         this.lastChatDoc = null;
         this.savedWidgets = [];
-        // Load the first batch of chats (today and older together)
         this.loadWidgetsBatch(user.uid);
       } else {
         this.savedWidgets = [];
       }
     });
   }
+  
   
   
   
@@ -126,6 +147,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       // Instead of simulating a response, call the agent:
       this.sendToAgent(this.newChatMessage);
       this.newChatMessage = '';
+      this.persistChatMessages();
     }
   }
 
@@ -187,6 +209,22 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       }
     }
   }
+
+  persistChatMessages(): void {
+    try {
+      const chatData = JSON.stringify(this.chatMessages);
+      invoke('set_local_storage', { key: 'chatMessages', value: chatData })
+        .then(() => {
+          console.log('Chat messages saved via Tauri storage');
+        })
+        .catch((err: any) => {
+          console.error('Error saving chat messages to Tauri storage', err);
+        });
+    } catch (e) {
+      console.error('Error stringifying chat messages', e);
+    }
+  }
+  
   
   
   public groupedWidgets: { [label: string]: SavedWidget[] } = {};
@@ -275,6 +313,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     widget.messages.forEach(msg => {
       this.chatMessages.push({ ...msg });
     });
+    this.persistChatMessages();
   }
 
   async loadWidgetsBatch(uid: string): Promise<void> {
@@ -451,6 +490,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       
       // Push the final agent reply into the chat
       this.chatMessages.push({ sender: 'ai', content: finalReply });
+      this.persistChatMessages();
       
     } catch (error) {
       console.error('Error sending chat to agent:', error);
