@@ -35,6 +35,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule     } from '@angular/material/input';
 import { MarkdownModule } from 'ngx-markdown';
 import { HighlightModule } from 'ngx-highlightjs';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatGridListModule }  from '@angular/material/grid-list';
 
 
 
@@ -46,6 +48,7 @@ import { environment } from '../.env/environment';
 import { TauriPersistence } from './tauri-firebase';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { HomeComponent } from './home/home.component';
+import { SwitchInterfaceComponent } from './switch-interface/switch-interface.component';
 
 
 @NgModule({
@@ -61,7 +64,8 @@ import { HomeComponent } from './home/home.component';
     DaltonDemoComponent,
     BodyComponent,
     LoginComponent,
-    HomeComponent
+    HomeComponent,
+    SwitchInterfaceComponent,
   ],
   imports: [
     BrowserModule,
@@ -78,6 +82,7 @@ import { HomeComponent } from './home/home.component';
     MatIconModule,
     MatDividerModule,
     MatListModule,
+    MatChipsModule, 
     MatBadgeModule,
     MatCardModule,
     MatProgressBarModule,
@@ -94,7 +99,8 @@ import { HomeComponent } from './home/home.component';
     }),
     SweetAlert2Module.forRoot(),
     MarkdownModule.forRoot(),
-    HighlightModule
+    HighlightModule,
+    MatGridListModule, 
     
   ],
   providers: [

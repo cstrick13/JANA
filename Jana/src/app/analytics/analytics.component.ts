@@ -40,6 +40,8 @@ export class AnalyticsComponent implements OnDestroy {
   private utilizationInterval: any;
   private deviceSub!: Subscription;
   selectedDevice!: Device;
+  linkStates: Record<string,string> = {};
+  readonly portNumbers = Array.from({ length: 28 }, (_, i) => i + 1);
 
   constructor(private dialog: MatDialog, private http: HttpClient, private deviceService: DeviceService) {}
 
@@ -68,23 +70,30 @@ export class AnalyticsComponent implements OnDestroy {
   }
 
   async loginFromFrontend(device: Device) {
-    if(device.version == "old"){
+    if (device.version === "old") {
       console.log("This is a different for different commands");
-    }else if(device.version == "new"){
+    } else if (device.version === "new") {
       try {
         const result = await invoke<string>('login_switch', {
-          username: device.username, // Adjust based on how you want to manage credentials.
-          password: device.password, // This is just an example; you may store credentials separately.
+          username: device.username,
+          password: device.password,
           ip: device.ip,
         });
         console.log('Login successful:', result);
+
+        // first immediate fetch:
         this.fetchUtilization(device.ip);
+
+        // clear any existing loop:
         if (this.utilizationInterval) {
           clearInterval(this.utilizationInterval);
         }
+        // new 15 s loop including both util + all link states
         this.utilizationInterval = setInterval(() => {
           this.fetchUtilization(device.ip);
+       
         }, 15000);
+
       } catch (error) {
         console.error('Login failed:', error);
       }
@@ -112,7 +121,7 @@ export class AnalyticsComponent implements OnDestroy {
       console.error('Error fetching utilization:', error);
     }
   }
-
+  
   async openLogPopup() {
     if (!this.selectedDevice) return;
     try {

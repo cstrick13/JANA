@@ -66,7 +66,7 @@ export class SidenavComponent {
       { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
       { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: '', icon: 'fas fa-users-cog', label: 'User Management' },
-      { routeLink: '', icon: 'fas fa-clipboard-list', label: 'System Logs' },
+      { routeLink: 'ports', icon: 'fas fa-clipboard-list', label: 'Switch Interface' },
       { routeLink: '', icon: 'fas fa-chart-line', label: 'Reports' },
       { routeLink: 'settings', icon: 'fas fa-cog', label: 'Settings' }
     ];
@@ -76,7 +76,7 @@ export class SidenavComponent {
       { routeLink: 'analytics', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Monitor' },
       { routeLink: 'jana', icon: 'fa-solid fa-robot', label: 'Jana' },
       { routeLink: '', icon: 'fas fa-users-cog', label: 'User Management' },
-      { routeLink: '', icon: 'fas fa-clipboard-list', label: 'System Logs' },
+      { routeLink: 'ports', icon: 'fas fa-clipboard-list', label: 'Switch Interface' },
       { routeLink: '', icon: 'fas fa-chart-line', label: 'Reports' },
       { routeLink: '', icon: 'fas fa-user-shield', label: 'Permissions' },
       { routeLink: '', icon: 'fas fa-search-plus', label: 'Audit Trail' },

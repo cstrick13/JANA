@@ -67,4 +67,17 @@
     </div>
     <div class="description">New log entries over the last 15 seconds</div>
   </mat-card>
+
+  <mat-card class="mt-4">
+    <mat-card-title>All Interface Link States</mat-card-title>
+    <mat-card-content>
+      <div *ngFor="let i of portNumbers" class="d-flex justify-content-between">
+        <span>1/1/{{ i }}</span>
+        <span>
+          {{ linkStates['1/1/' + i] || '—' }}
+        </span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  
 </div>

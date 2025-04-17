@@ -8,6 +8,7 @@ import { JanaComponent } from "./jana/jana.component";
 import { AuthGuard } from "./auth.guard";
 import { LoginComponent } from "./login/login.component";
 import { AnalyticsComponent } from "./analytics/analytics.component";
+import { SwitchInterfaceComponent } from "./switch-interface/switch-interface.component";
 
 
 
@@ -53,6 +54,11 @@ const routeConfig: Routes = [
     path: "recording",
     component: DaltonDemoComponent,
     title: "Dalton Demo",
+    },
+    {
+        path: "ports",
+        component: SwitchInterfaceComponent,
+        title: "Ports",
     },
 
 ]

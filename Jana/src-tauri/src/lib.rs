@@ -241,6 +241,87 @@ async fn logout_switch(ip: String) -> Result<String, String> {
     }
 }
 
+
+macro_rules! interface_link_state_cmd {
+    ($fn_name:ident, $path:expr) => {
+        #[tauri::command]
+        async fn $fn_name(ip: String) -> Result<String, String> {
+            let client = {
+                let session = SESSION_CLIENT.lock().await;
+                session.clone().ok_or("Not logged in")?
+            };
+            let url = format!("https://{}{}", ip, $path);
+            let res = client
+                .get(&url)
+                .header("Accept", "application/json")
+                .send().await
+                .map_err(|e| e.to_string())?;
+            let status = res.status();
+            let body = res.text().await.map_err(|e| e.to_string())?;
+            if !status.is_success() {
+                return Err(format!("HTTP {}: {}", status, body));
+            }
+            let json: serde_json::Value = serde_json::from_str(&body)
+                .map_err(|e| format!("JSON parse error: {}", e))?;
+
+            // extract a handful of useful fields:
+            let link_state    = json.get("link_state").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let admin_state   = json.get("admin_state").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let duplex        = json.get("duplex").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let speed         = json.get("link_speed").and_then(|v| v.as_i64()).unwrap_or(0);
+            let mac           = json.get("mac_in_use").and_then(|v| v.as_str()).unwrap_or("");
+            let flaps         = json.get("flaps_performed").and_then(|v| v.as_i64()).unwrap_or(0);
+            let idx           = json.get("ifindex").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            // build a small JSON object:
+            let overview = serde_json::json!({
+                "ifindex":          idx,
+                "admin_state":      admin_state,
+                "link_state":       link_state,
+                "duplex":           duplex,
+                "link_speed_bps":   speed,
+                "mac_in_use":       mac,
+                "flaps_performed":  flaps
+            });
+
+            Ok(overview.to_string())
+        }
+    };
+}
+
+// Define commands for each interface path
+interface_link_state_cmd!(get_interface_1_1_1,  "/rest/v10.12/system/interfaces/1%2F1%2F1");
+interface_link_state_cmd!(get_interface_1_1_2,  "/rest/v10.12/system/interfaces/1%2F1%2F2");
+interface_link_state_cmd!(get_interface_1_1_3,  "/rest/v10.12/system/interfaces/1%2F1%2F3");
+interface_link_state_cmd!(get_interface_1_1_4,  "/rest/v10.12/system/interfaces/1%2F1%2F4");
+interface_link_state_cmd!(get_interface_1_1_5,  "/rest/v10.12/system/interfaces/1%2F1%2F5");
+interface_link_state_cmd!(get_interface_1_1_6,  "/rest/v10.12/system/interfaces/1%2F1%2F6");
+interface_link_state_cmd!(get_interface_1_1_7,  "/rest/v10.12/system/interfaces/1%2F1%2F7");
+interface_link_state_cmd!(get_interface_1_1_8,  "/rest/v10.12/system/interfaces/1%2F1%2F8");
+interface_link_state_cmd!(get_interface_1_1_9,  "/rest/v10.12/system/interfaces/1%2F1%2F9");
+interface_link_state_cmd!(get_interface_1_1_10, "/rest/v10.12/system/interfaces/1%2F1%2F10");
+interface_link_state_cmd!(get_interface_1_1_11, "/rest/v10.12/system/interfaces/1%2F1%2F11");
+interface_link_state_cmd!(get_interface_1_1_12, "/rest/v10.12/system/interfaces/1%2F1%2F12");
+interface_link_state_cmd!(get_interface_1_1_13, "/rest/v10.12/system/interfaces/1%2F1%2F13");
+interface_link_state_cmd!(get_interface_1_1_14, "/rest/v10.12/system/interfaces/1%2F1%2F14");
+interface_link_state_cmd!(get_interface_1_1_15, "/rest/v10.12/system/interfaces/1%2F1%2F15");
+interface_link_state_cmd!(get_interface_1_1_16, "/rest/v10.12/system/interfaces/1%2F1%2F16");
+interface_link_state_cmd!(get_interface_1_1_17, "/rest/v10.12/system/interfaces/1%2F1%2F17");
+interface_link_state_cmd!(get_interface_1_1_18, "/rest/v10.12/system/interfaces/1%2F1%2F18");
+interface_link_state_cmd!(get_interface_1_1_19, "/rest/v10.12/system/interfaces/1%2F1%2F19");
+interface_link_state_cmd!(get_interface_1_1_20, "/rest/v10.12/system/interfaces/1%2F1%2F20");
+interface_link_state_cmd!(get_interface_1_1_21, "/rest/v10.12/system/interfaces/1%2F1%2F21");
+interface_link_state_cmd!(get_interface_1_1_22, "/rest/v10.12/system/interfaces/1%2F1%2F22");
+interface_link_state_cmd!(get_interface_1_1_23, "/rest/v10.12/system/interfaces/1%2F1%2F23");
+interface_link_state_cmd!(get_interface_1_1_24, "/rest/v10.12/system/interfaces/1%2F1%2F24");
+interface_link_state_cmd!(get_interface_1_1_25, "/rest/v10.12/system/interfaces/1%2F1%2F25");
+interface_link_state_cmd!(get_interface_1_1_26, "/rest/v10.12/system/interfaces/1%2F1%2F26");
+interface_link_state_cmd!(get_interface_1_1_27, "/rest/v10.12/system/interfaces/1%2F1%2F27");
+interface_link_state_cmd!(get_interface_1_1_28, "/rest/v10.12/system/interfaces/1%2F1%2F28");
+
+
+
+
 #[tauri::command]
 async fn get_utilization(ip: String) -> Result<String, String> {
     // Get the existing session client with cookies already stored.
@@ -370,7 +451,35 @@ pub fn run() {
             login_switch,
             logout_switch,
             get_utilization,
-            get_event_logs
+            get_event_logs,
+            get_interface_1_1_1,
+            get_interface_1_1_2,
+            get_interface_1_1_3,
+            get_interface_1_1_4,
+            get_interface_1_1_5,
+            get_interface_1_1_6,
+            get_interface_1_1_7,
+            get_interface_1_1_8,
+            get_interface_1_1_9,
+            get_interface_1_1_10,
+            get_interface_1_1_11,
+            get_interface_1_1_12,
+            get_interface_1_1_13,
+            get_interface_1_1_14,
+            get_interface_1_1_15,
+            get_interface_1_1_16,
+            get_interface_1_1_17,
+            get_interface_1_1_18,
+            get_interface_1_1_19,
+            get_interface_1_1_20,
+            get_interface_1_1_21,
+            get_interface_1_1_22,
+            get_interface_1_1_23,
+            get_interface_1_1_24,
+            get_interface_1_1_25,
+            get_interface_1_1_26,
+            get_interface_1_1_27,
+            get_interface_1_1_28
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");

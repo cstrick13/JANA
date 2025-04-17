@@ -1,0 +1,105 @@
+<mat-toolbar class="app-toolbar">
+    <div class="toolbar-left">
+      <mat-icon class="app-logo">router</mat-icon>
+      <span class="app-title">
+        {{ selectedDevice?.name || 'Switch Dashboard' }}
+      </span>
+    </div>
+    <div class="toolbar-right">
+    </div>
+  </mat-toolbar>
+  
+  
+  <section class="ports-grid">
+    <mat-card
+      *ngFor="let port of portNumbers"
+      class="port-card"
+      [ngClass]="
+        portOverviews['1/1/'+port] 
+          ? getStatusClass(portOverviews['1/1/'+port]?.link_state) 
+          : 'unknown'
+      "
+    >
+      <mat-card-header>
+        <mat-icon class="port-icon">
+          {{
+            portOverviews['1/1/'+port]
+              ? (portOverviews['1/1/'+port]?.link_state === 'up' 
+                  ? 'link' 
+                  : 'link_off')
+              : 'cloud_off'
+          }}
+        </mat-icon>
+  
+        <mat-card-title>Port {{ port }}</mat-card-title>
+  
+        <mat-chip
+          [color]="
+            portOverviews['1/1/'+port]?.link_state === 'up' 
+              ? 'accent' 
+              : 'warn'
+          "
+          selected
+          class="state-chip"
+        >
+          {{
+            portOverviews['1/1/'+port]
+              ? (portOverviews['1/1/'+port]?.link_state | uppercase)
+              : 'N/C'
+          }}
+        </mat-chip>
+      </mat-card-header>
+  
+      <mat-card-content>
+        <ng-container *ngIf="portOverviews['1/1/'+port]; else notConnected">
+          <div class="prop">
+            <mat-icon>power_settings_new</mat-icon>
+            <span>
+              Admin:
+              {{ portOverviews['1/1/'+port]?.admin_state || '–' }}
+            </span>
+          </div>
+  
+          <div class="prop">
+            <mat-icon>swap_horiz</mat-icon>
+            <span>
+              Duplex:
+              {{ portOverviews['1/1/'+port]?.duplex || '–' }}
+            </span>
+          </div>
+  
+          <div class="prop">
+            <mat-icon>speed</mat-icon>
+            <span>
+              Speed:
+              {{ formatSpeed(portOverviews['1/1/'+port]?.link_speed_bps) || '–' }}
+            </span>
+          </div>
+  
+          <div class="prop">
+            <mat-icon>memory</mat-icon>
+            <span>
+              MAC:
+              {{ portOverviews['1/1/'+port]?.mac_in_use || '–' }}
+            </span>
+          </div>
+  
+          <div class="prop">
+            <mat-icon>autorenew</mat-icon>
+            <span>
+              Flaps:
+              {{ portOverviews['1/1/'+port]?.flaps_performed || 0 }}
+            </span>
+          </div>
+        </ng-container>
+  
+        <ng-template #notConnected>
+          <div class="error-message">
+            <mat-icon color="warn">cloud_off</mat-icon>
+            <span>Switch not connected</span>
+          </div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </section>
+  
