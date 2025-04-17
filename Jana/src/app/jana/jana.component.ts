@@ -165,38 +165,38 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
       return;
     }
     
-    // Use the first user message as the title (truncated to a maximum length if needed)
-    const title = firstMessage.trim().slice(0, 50); // For example, first 50 characters
+    const title = firstMessage.trim().slice(0, 50);
     const widgetData: SavedWidget = {
-      title: title,
+      title,
       messages: this.chatMessages,
-      savedAt: serverTimestamp(),   // For final Firestore value
-      localSavedAt: new Date()        // For immediate UI grouping
+      savedAt: serverTimestamp(),
+      localSavedAt: new Date()
     };
-    
-    // Define the chats collection reference first:
     const userChatsCollection = collection(AppModule.db, 'users', this.currentUser.uid, 'chats');
-    
+  
     try {
-      // Create a new document on Firestore.
       const docRef = await addDoc(userChatsCollection, widgetData);
-      // Save the created document's id to the component state.
+  
+      // 1) Store the new ID in your component state
       this.currentWidgetId = docRef.id;
       console.log('New widget created with ID:', this.currentWidgetId);
-      
-      // Immediately update your local UI: unshift the new widget into the savedWidgets array.
+  
+      // 2) Persist it to Tauri local storage
+      this.persistSelectedChatId();
+  
+      // 3) Update the UI lists
       this.savedWidgets.unshift({ ...widgetData, id: this.currentWidgetId });
-      // Regroup the widgets so the new one appears in the right group (e.g. "Today").
       this.groupChatsByDay();
-      
-      // Optionally, log the updated UI state:
+  
       console.log('Updated savedWidgets:', this.savedWidgets);
       console.log('Grouped widgets:', this.groupedWidgets);
+  
     } catch (err) {
       console.error('Error creating new widget:', err);
       return Promise.reject(err);
     }
   }
+  
   
   sendChatMessage(): void {
     if (!this.newChatMessage.trim()) return;
