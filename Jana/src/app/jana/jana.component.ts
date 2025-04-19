@@ -41,6 +41,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   public isRecording = false;
   public isWaitingForAgent = false;
   public canLoadMore: boolean = false;
+  private autoRestartMic = true;
 
   public chatTitle: string = ''; // Holds the title from the modal
   @ViewChild('titleModalRef') titleModalRef!: ElementRef;
@@ -942,8 +943,195 @@ vec3 fade(vec3 t) {
     this.camera.updateProjectionMatrix();
   }
 
+  private normalizeAcronyms(text: string): string {
+    const map: Record<string, string> = {
+      // Networking & Internet
+      "aren't":    "are not",
+    "can't":     "cannot",
+    "couldn't":  "could not",
+    "didn't":    "did not",
+    "doesn't":   "does not",
+    "don't":     "do not",
+    "hadn't":    "had not",
+    "hasn't":    "has not",
+    "haven't":   "have not",
+    "he'd":      "he would",
+    "he'll":     "he will",
+    "he's":      "he is",
+    "i'd":       "I would",
+    "i'll":      "I will",
+    "i'm":       "I am",
+    "i've":      "I have",
+    "isn't":     "is not",
+    "it's":      "it is",
+    "let's":     "let us",
+    "mightn't":  "might not",
+    "mustn't":   "must not",
+    "shan't":    "shall not",
+    "she'd":     "she would",
+    "she'll":    "she will",
+    "she's":     "she is",
+    "shouldn't": "should not",
+    "that's":    "that is",
+    "there's":   "there is",
+    "they'd":    "they would",
+    "they'll":   "they will",
+    "they're":   "they are",
+    "they've":   "they have",
+    "we'd":      "we would",
+    "we're":     "we are",
+    "we've":     "we have",
+    "weren't":   "were not",
+    "what'll":   "what will",
+    "what're":   "what are",
+    "what's":    "what is",
+    "what've":   "what have",
+    "where's":   "where is",
+    "who'd":     "who would",
+    "who'll":    "who will",
+    "who're":    "who are",
+    "who's":     "who is",
+    "who've":    "who have",
+    "won't":     "will not",
+    "wouldn't":  "would not",
+    "you'd":     "you would",
+    "you'll":    "you will",
+    "you're":    "you are",
+    "you've":    "you have",
+    "o'clock":   "o clock",
+    "y'all":     "you all",
+    "y'all'd've":"you all would have",
+      'ARP':    'arp',
+      'BGP':    'bee‑gee‑pee',
+      'CIDR':   'sigh‑der',
+      'DHCP':   'dee‑h‑see‑pee',
+      'DNS':    'dee‑en‑ess',
+      'DNSSEC': 'dee‑en‑ess‑sek',
+      'HTTP':   'aitch‑tee‑tee‑pee',
+      'HTTPS':  'aitch‑tee‑tee‑pee‑ess',
+      'ICMP':   'eye‑see‑em‑pee',
+      'IP':     'eye‑pee',
+      'IPSEC':  'eye‑pee‑ess‑e‑see',
+      'LAN':    'lan',
+      'MAC':    'mack',
+      'MPLS':   'em‑pee‑ell‑ess',
+      'NAT':    'nat',
+      'NTP':    'en‑tee‑pee',
+      'OSI':    'oh‑ess‑eye',
+      'PAN':    'pan',
+      'PPP':    'pee‑pee‑pee',
+      'POP3':   'pop three',
+      'RADIUS': 'ray‑dee‑us',
+      'RFC':    'are‑eff‑see',
+      'SMTP':   'ess‑em‑tee‑pee',
+      'SNMP':   'ess‑en‑em‑pee',
+      'SSH':    'ess‑ess‑aitch',
+      'TCP':    'tee‑see‑pee',
+      'TLS':    'tee‑ell‑ess',
+      'TTL':    'tee‑tee‑ell',
+      'UDP':    'you‑dee‑pee',
+      'VLAN':   'v‑lan',
+      'VPN':    'vee‑pee‑en',
+      'WLAN':   'double‑you‑lan',
+  
+      // CS / Dev
+      'API':    'ay‑pee‑eye',
+      'ASCII':  'ask‑ee',
+      'AWS':    'ay‑double‑you‑ess',
+      'CRUD':   'crud',
+      'CPU':    'see‑pee‑you',
+      'CSS':    'see‑ess‑ess',
+      'DB':     'database',
+      'DBMS':   'dee‑bee‑em‑ess',
+      'DOM':    'dom',
+      'DOS':    'doss',
+      'ERP':    'ee‑are‑pee',
+      'FTP':    'eff‑tee‑pee',
+      'GPU':    'gee‑pee‑you',
+      'GUI':    'goo‑ey',
+      'HTML':   'aitch‑tee‑em‑ell',
+      'IDE':    'eye‑dee‑ee',
+      'IoT':    'eye‑oh‑tee',
+      'JSON':   'jay‑son',
+      'JS':     'jay‑ess',
+      'JVM':    'jay‑vee‑em',
+      'KPI':    'kay‑pee‑eye',
+      'LDAP':   'ell‑dee‑ay‑pee',
+      'MVC':    'em‑vee‑see',
+      'OOP':    'oh‑oh‑pee',
+      'ORM':    'oh‑are‑em',
+      'OS':     'oh‑ess',
+      'PHP':    'pee‑aitch‑pee',
+      'REST':   'rest',
+      'RPC':    'are‑pee‑cee',
+      'SaaS':   'sass',
+      'SDK':    'ess‑dee‑kay',
+      'SQL':    'sequel',
+      'SVG':    'ess‑vee‑gee',
+      'NoSQL': 'no‑sequel',
+      'UI':     'you‑eye',
+      'UML':    'you‑em‑ell',
+      'URL':    'you‑are‑ell',
+      'UX':     'you‑ex',
+      'VM':     'vee‑em',
+      'XML':    'ex‑em‑ell',
+      'YAML':   'yah‑mel',
+  
+      // Security
+      'APT':    'ay‑pee‑tee',
+      'CVE':    'see‑vee‑ee',
+      'CVSS':   'see‑vee‑ess‑ess',
+      'CSRF':   'sea‑ess‑arr‑eff',
+      'DDoS':   'dee‑dos',
+      'EDR':    'ee‑dee‑are',
+      'IAM':    'eye‑ay‑em',
+      'MITM':   'mit‑em',
+      'MITRE':  'my‑tree',
+      'OWASP':  'oh‑w‑asp',
+      'PCI':    'pee‑cee‑eye',
+      'PDfS':   'p‑dee‑eff‑ess',
+      'PKI':    'pee‑kay‑eye',
+      'RSA':    'are‑ess‑ay',
+      'SIEM':   'seem',
+      'SSL':    'ess‑ess‑ell',
+      'WAF':    'wahff',
+      'XSS':    'ex‑ess‑ess',
+  
+      // Common Latin / Abbrev
+      'E\\.g\\.': 'for example',
+      'I\\.e\\.': 'that is',
+      'Etc\\.':   'et cetera',
+      'vs\\.':    'versus',
+      'a\\.m\\.': 'a‑em',
+      'p\\.m\\.': 'pee‑em',
+  
+      // Misc
+      'FAQ':    'fak',
+      'DIY':    'dee‑eye‑why',
+      'RSVP':   'are‑ess‑vee‑pee',
+      'NASA':   'nasa',
+      'UNICEF': 'you‑ne‑ice‑eff'
+    };
+  
+    // Build a regex that matches *only* the keys in our map:
+    const escKeys = Object.keys(map)
+      .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(?<!\\w)(${escKeys.join('|')})(?!\\w)`, 'g');
+  
+    return text.replace(regex, match => {
+      // first try exact key (for acronyms)
+      if (map[match]) return map[match];
+      // then lowercase (for contractions)
+      const lower = match.toLowerCase();
+      return map[lower] ?? match;
+    });
+  }
+  
+
   private prepareSpeechText(markdown: string): string {
     let text = markdown;
+
+    text = this.normalizeAcronyms(text);
   
     // 1) Remove fenced code blocks
     text = text.replace(/```[\s\S]*?```/g, "");
@@ -981,8 +1169,18 @@ vec3 fade(vec3 t) {
   
     // 8) If there was a table originally, tuck in a short cue
     if (/^\|.*\|/m.test(markdown)) {
-      text += " I’ve added the table to the chat.";
+      text += " I’ve added the table for you to see.";
     }
+
+    if (/```/.test(markdown)) {
+      text += " I’ve added the code snippet for you to see.";
+    }
+
+    if (/```/.test(markdown) && /^\|.*\|/m.test(markdown))
+      text += "I’ve added the code snippet and the table for you to0.";
+    
+
+
   
     return text;
   }
@@ -1044,8 +1242,11 @@ vec3 fade(vec3 t) {
                 sound.play();
                 this.analyser = new THREE.AudioAnalyser(sound, 32);
                 (sound as any).source.onended = () => {
-                  console.log('TTS finished → restarting mic');
-                  this.startRecording();
+                  this.currentSound = undefined;
+                  if (this.autoRestartMic) {
+                    console.log('TTS finished → restarting mic');
+                    this.startRecording();
+                  }
                 };
                 
             }
@@ -1092,8 +1293,44 @@ vec3 fade(vec3 t) {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
 
+  public interruptEverything(): void {
+    let interrupted = false;
+  
+    // Stop TTS if it's playing
+    if (this.currentSound && this.currentSound.isPlaying) {
+      this.currentSound.stop();
+      this.currentSound = undefined;
+      console.log("🔇 TTS playback interrupted.");
+      interrupted = true;
+    }
+  
+    // Stop agent loading
+    if (this.isWaitingForAgent) {
+      this.isWaitingForAgent = false;
+      console.log("⏳ Agent loading interrupted.");
+      interrupted = true;
+    }
+  
+    // Stop recording if active
+    if (this.isRecording || this.isListening) {
+      this.stopListening();
+      console.log("🎙️ Recording interrupted.");
+      interrupted = true;
+    }
+  
+    // If anything was interrupted, start recording again
+    if (interrupted) {
+      setTimeout(() => this.startRecording(), 300); // slight delay for cleanup
+    }
+  }
+  
+  
 
   public startRecording() {
+    if (this.currentSound || this.isWaitingForAgent) {
+      console.log("❌ Cannot start recording — TTS or agent is still active.");
+      return;
+    }
     this.isListening = true;  
     this.isRecording = true;
     this.uniforms['u_isRecording'].value = 1.0;
@@ -1141,6 +1378,7 @@ vec3 fade(vec3 t) {
   }
 
   public stopListening() {
+    this.autoRestartMic = false;
     this.isListening = false;
     if (this.silenceTimer !== null) {
       clearTimeout(this.silenceTimer);

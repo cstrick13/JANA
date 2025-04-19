@@ -29,6 +29,8 @@
     "@types/three": "^0.172.0",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.4.8",
+    "contractions": "^0.0.7",
+    "expand-contractions": "^1.0.1",
     "firebase": "^11.4.0",
     "firebase-admin": "^13.2.0",
     "highlight.js": "^11.11.1",
