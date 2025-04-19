@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, AfterViewInit, OnDestroy, ViewChild} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { RouterModule } from '@angular/router';
@@ -6,119 +6,252 @@ import Chart from 'chart.js/auto';
 import { AuthService } from '../auth.service';
 import { invoke } from '@tauri-apps/api/core';
 import { Device, DeviceService } from '../devices.service';
+import { Subscription } from 'rxjs';
 
 @Component({
-    selector: 'app-home',
-    templateUrl: './home.component.html',
-    styleUrl: './home.component.css',
-    standalone: false
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  styleUrl: './home.component.css',
+  standalone: false
 })
-export class HomeComponent implements OnInit {
-    @ViewChild('bandwidthCanvas') canvas!: ElementRef<HTMLCanvasElement>;
-    userRole: string = ''; // Track user role
-    userName: string = ''; // Track user name
-    isLoggedIn: boolean = false; // Track login status
-    currentUser: any; // Track current user
-    hasProfile: boolean = false; // Track if the user has a profile
-    authUnsubscribe: any; // Unsubscribe function
-    searchQuery = '';
-    isLoading: boolean = true;
-    devices: Device[] = [];
-    newDevice: Device = { name: '', ip: '', version: '' };
-    selectedDevice: Device | null = null;
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  // ─── Canvas refs for sparklines ───
+  @ViewChild('cpuCanvas') cpuCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('memoryCanvas') memoryCanvas!: ElementRef<HTMLCanvasElement>;
 
-    constructor(
-        private cdr: ChangeDetectorRef,
-        private router: Router, private authService: AuthService // Typed injection for AuthService
-        ,private deviceService: DeviceService
-      ) {}
+  // ─── Original Auth/UI state ───
+  userRole = '';
+  userName = '';
+  isLoggedIn = false;
+  currentUser: any;
+  hasProfile = false;
+  authUnsubscribe!: Subscription;
+  searchQuery = '';
+  isLoading = true;
 
+  // ─── Devices ───
+  devices: Device[] = [];
+  newDevice: Device = { name: '', ip: '', version: '' };
+  selectedDevice: Device | null = null;
 
-      ngOnInit() {
-        // Start loading
-        this.isLoading = true;
-        
-        // Subscribe to authentication changes
-        this.authService.currentUser$.subscribe(user => {
-          this.isLoggedIn = !!user;
-          if (user) {
-            // Retrieve both display name and role concurrently
-            Promise.all([
-              invoke<string>('get_local_storage', { key: 'displayName' }),
-              invoke<string>('get_local_storage', { key: 'role' })
-            ])
-            .then(([name, role]) => {
-              this.userName = name || 'User';
-              this.userRole = role || 'operator';
-              console.log('Display name from Tauri:', this.userName);
-              console.log('Role from Tauri:', this.userRole);
-            })
-            .catch(err => {
-              console.error('Error reading from Tauri storage:', err);
-              // Set fallback values if retrieval fails
-              this.userName = 'User';
-              this.userRole = 'operator';
-            })
-            .finally(() => {
-              // Stop loading once both values have been handled
-              this.isLoading = false;
-            });
-            
-            // Retrieve stored devices if available.
-            invoke<string>('get_local_storage', { key: 'devices' })
-              .then((result: string | null) => {
-                if (result) {
-                  try {
-                    this.devices = JSON.parse(result);
-                    console.log('Devices loaded from storage:', this.devices);
-                  } catch (error) {
-                    console.error('Error parsing devices from storage:', error);
-                  }
-                }
-              })
-              .catch(error => console.error('Error loading devices:', error));
-              
-          } else {
-            this.userName = '';
-            this.userRole = '';
-            this.isLoading = false;
-          }
-          console.log('Authentication status updated:', this.isLoggedIn, 'Username:', this.userName);
-        });
-        this.deviceService.selectedDevice$.subscribe(device => {
-          this.selectedDevice = device;
-          console.log('Current selected device:', device);
-        });
-      }
-      
-      onSaveDevice(): void {
-        // Ensure required fields are provided for name, ip, and version.
-        if (this.newDevice.name && this.newDevice.ip && this.newDevice.version) {
-          // If the password field is empty, default it to an empty string.
-          this.newDevice.password = this.newDevice.password ? this.newDevice.password : "";
-          
-          // Add a copy of the newDevice to the devices array.
-          this.devices.push({ ...this.newDevice });
-          
-          // Save the updated devices array to local storage.
-          invoke('set_local_storage', {
-            key: 'devices',
-            value: JSON.stringify(this.devices)
+  // ─── Analytics state ───
+  isLoggingIn = false;
+  cpuUtilization = 0;
+  memoryUtilization = 0;
+  private utilizationInterval: any;
+  private deviceSub!: Subscription;
+
+  // ─── Chart.js instances ───
+  private cpuChart: Chart<'line'> | null = null;
+  private memoryChart: Chart<'line'> | null = null;
+
+  // ─── History + stats ───
+  private maxPoints = 20;
+  cpuHistory: number[] = Array(this.maxPoints).fill(0);
+  memHistory: number[] = Array(this.maxPoints).fill(0);
+  labels: string[]       = Array(this.maxPoints).fill('');
+  avgCpu = 0; minCpu = 0; maxCpu = 0;
+  avgMem = 0; minMem = 0; maxMem = 0;
+
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private authService: AuthService,
+    private deviceService: DeviceService
+  ) {}
+
+  ngOnInit() {
+    this.isLoading = true;
+
+    // Auth subscription
+    this.authUnsubscribe = this.authService.currentUser$.subscribe(user => {
+      this.isLoggedIn = !!user;
+      if (user) {
+        Promise.all([
+          invoke<string>('get_local_storage', { key: 'displayName' }),
+          invoke<string>('get_local_storage', { key: 'role' })
+        ])
+          .then(([name, role]) => {
+            this.userName = name || 'User';
+            this.userRole = role || 'operator';
+            console.log('Display name from Tauri:', this.userName);
+            console.log('Role from Tauri:', this.userRole);
           })
-            .then(() => console.log('Devices saved to local storage:', this.devices))
-            .catch(error => console.error('Error saving devices:', error));
-          
-          // Reset the newDevice model to clear the form.
-          this.newDevice = { name: '', ip: '', version: '', username: '', password: '' };
-        } else {
-          console.log('Please complete all fields.');
+          .catch(err => {
+            console.error('Error reading from Tauri storage:', err);
+            this.userName = 'User';
+            this.userRole = 'operator';
+          })
+          .finally(() => this.isLoading = false);
+
+        invoke<string>('get_local_storage', { key: 'devices' })
+          .then(res => {
+            if (res) this.devices = JSON.parse(res);
+          })
+          .catch(() => {/* ignore */});
+      } else {
+        this.userName = '';
+        this.userRole = '';
+        this.isLoading = false;
+      }
+    });
+
+    // Device selection → login + poll
+    this.deviceSub = this.deviceService.selectedDevice$
+      .subscribe(device => {
+        this.selectedDevice = device;
+        if (device) this.loginFromFrontend(device);
+      });
+  }
+
+  ngAfterViewInit() {
+    // CPU sparkline
+    const cpuCtx = this.cpuCanvas.nativeElement.getContext('2d');
+    if (cpuCtx) {
+      this.cpuChart = new Chart(cpuCtx, {
+        type: 'line',
+        data: {
+          labels: this.labels,
+          datasets: [{
+            data: this.cpuHistory,
+            fill: true,
+            tension: 0.3,
+            borderWidth: 1,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          scales: { x:{display:false}, y:{display:false} },
+          plugins:{ legend:{display:false} },
+          responsive:true,
+          maintainAspectRatio:false
         }
+      });
+    }
+
+    // Memory sparkline
+    const memCtx = this.memoryCanvas.nativeElement.getContext('2d');
+    if (memCtx) {
+      this.memoryChart = new Chart(memCtx, {
+        type: 'line',
+        data: {
+          labels: this.labels,
+          datasets: [{
+            data: this.memHistory,
+            fill: true,
+            tension: 0.3,
+            borderWidth: 1,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          scales: { x:{display:false}, y:{display:false} },
+          plugins:{ legend:{display:false} },
+          responsive:true,
+          maintainAspectRatio:false
+        }
+      });
+    }
+
+    // draw initial zeros
+    this.updateCharts();
+  }
+
+  ngOnDestroy() {
+    if (this.utilizationInterval) clearInterval(this.utilizationInterval);
+    this.authUnsubscribe.unsubscribe();
+    this.deviceSub.unsubscribe();
+    this.logOutFrontend();
+  }
+
+  onSaveDevice(): void {
+    if (this.newDevice.name && this.newDevice.ip && this.newDevice.version) {
+      this.newDevice.password = this.newDevice.password ?? '';
+      this.devices.push({ ...this.newDevice });
+      invoke('set_local_storage', {
+        key: 'devices',
+        value: JSON.stringify(this.devices)
+      }).catch(() => {});
+      this.newDevice = { name:'', ip:'', version:'', username:'', password:'' };
+    }
+  }
+
+  onDeviceClick(device: Device) {
+    this.deviceService.setSelectedDevice(device);
+  }
+
+  private async loginFromFrontend(device: Device) {
+    this.isLoggingIn = true;
+    if (device.version !== 'new') { this.isLoggingIn = false; return; }
+    try {
+      await invoke('login_switch', {
+        username: device.username||'',
+        password: device.password||'',
+        ip: device.ip
+      });
+      this.fetchUtilization(device.ip);
+      if (this.utilizationInterval) clearInterval(this.utilizationInterval);
+      this.utilizationInterval = setInterval(() => {
+        this.fetchUtilization(device.ip);
+      }, 15000);
+    } catch {}
+    finally { this.isLoggingIn = false; }
+  }
+
+  private async logOutFrontend() {
+    if (!this.selectedDevice) return;
+    await invoke('logout_switch', { ip: this.selectedDevice.ip }).catch(() => {});
+  }
+
+  private async fetchUtilization(ip: string) {
+    try {
+      const raw = await invoke<string>('get_utilization', { ip });
+      const {cpu, memory} = JSON.parse(raw);
+      this.cpuUtilization    = cpu;
+      this.memoryUtilization = memory;
+
+      // push & shift
+      const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      this.cpuHistory.push(cpu);
+      this.memHistory.push(memory);
+      this.labels.push(now);
+
+      if (this.cpuHistory.length > this.maxPoints) {
+        this.cpuHistory.shift();
+        this.memHistory.shift();
+        this.labels.shift();
       }
-      
-    
-      // Called when a device card is clicked
-      onDeviceClick(device: Device): void {
-        this.deviceService.setSelectedDevice(device);
-      }
-    
+
+      this.updateStats();
+      this.updateCharts();
+    } catch {}
+  }
+
+  private updateStats() {
+    const c = this.cpuHistory,   m = this.memHistory;
+    const sum = (a: number[]) => a.reduce((x,y)=>x+y,0);
+    if (c.length) {
+      this.avgCpu = Math.round(sum(c)/c.length);
+      this.minCpu = Math.min(...c);
+      this.maxCpu = Math.max(...c);
+    }
+    if (m.length) {
+      this.avgMem = Math.round(sum(m)/m.length);
+      this.minMem = Math.min(...m);
+      this.maxMem = Math.max(...m);
+    }
+  }
+
+  private updateCharts() {
+    if (this.cpuChart) {
+      this.cpuChart.data.labels = this.labels;
+      this.cpuChart.data.datasets![0].data = this.cpuHistory;
+      this.cpuChart.update();
+    }
+    if (this.memoryChart) {
+      this.memoryChart.data.labels = this.labels;
+      this.memoryChart.data.datasets![0].data = this.memHistory;
+      this.memoryChart.update();
+    }
+  }
 }

@@ -124,7 +124,62 @@ input:checked + .slider:before {
   padding: 0.5rem 0;
 }
 
+/* ── Resource Utilization tweaks ── */
+.utilization-card {
+  /* tighten up the card padding */
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
 
+.util-panel {
+  /* compact each mini‑panel */
+  padding: 0.5rem 0;
+}
 
+.util-title {
+  /* small panel title */
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
 
+.util-stats {
+  /* summary‐row container */
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
 
+.util-stats .stat {
+  /* each stat box */
+  flex: 1;
+  text-align: center;
+}
+
+.util-stats .stat small {
+  /* label inside stat */
+  display: block;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.util-stats .stat-value {
+  /* value inside stat */
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sparkline-chart {
+  /* shrink Chart.js canvas to sparkline size */
+  width: 100% !important;
+  height: 100px !important;
+  display: block;
+}
+
+.utilization-card { padding: 1rem; }
+.util-panel { padding: 0.5rem 0; }
+.util-title { font-size: 0.9rem; margin-bottom: 0.25rem; }
+.util-stats { display:flex; justify-content:space-between; margin-bottom:0.5rem; }
+.util-stats .stat { flex:1; text-align:center; }
+.util-stats .stat small { display:block; font-size:0.7rem; color:#666; }
+.util-stats .stat-value { font-size:0.85rem; font-weight:600; }
+.sparkline-chart { width:100% !important; height:100px !important; display:block; }
