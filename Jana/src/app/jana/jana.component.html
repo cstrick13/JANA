@@ -37,7 +37,7 @@
     rows="1"
   ></textarea>
   <div class="chat-input-icons">
-    <button class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
+    <button (click)="startRecording()" class="send-btn" data-bs-toggle="modal" data-bs-target="#exampleModal">
       <i class="fa fa-microphone"></i>
     </button>
     <button class="send-btn" (click)="sendChatMessage()">
@@ -172,15 +172,13 @@
 
 
 <!-- Modal remains unchanged -->
-<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content custom-modal-content">
       <!-- Custom Header with "traffic lights" -->
       <div class="custom-modal-header">
         <div class="traffic-lights">
-          <span class="light red"></span>
-          <span class="light yellow"></span>
-          <span class="light green"></span>
+          <span (click)="stopListening()" class="light red"></span>
         </div>
       </div>
 
@@ -192,13 +190,10 @@
         </div>
         <!-- Bottom icons (replace with real icons or buttons) -->
         <div class="modal-icons">
-          <button class="icon-button" (click)="startRecording()">
-            <i class="fa fa-microphone"></i>
-          </button>
-          <button class="icon-button" (click)="stopRecording()">
+          <button class="icon-button" (click)="stopListening()">
             <i class="fa fa-stop"></i>
           </button>
-          <button class="icon-button" data-bs-dismiss="modal" aria-label="Close">
+          <button (click)="stopListening()" class="icon-button" data-bs-dismiss="modal" aria-label="Close">
             <i class="fa fa-times"></i>
           </button>
         </div>

@@ -57,6 +57,7 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
   private lastChatDoc: any = null;  
     // Number of chats to load in each batch
   private batchSize: number = 30;  
+  private isListening = false;
 
   
 
@@ -77,6 +78,8 @@ export class JanaComponent implements OnInit, AfterViewInit, OnDestroy  {
     u_frequency: {value: 0.0},
     u_isRecording: { value: 0.0 }
   };  public savedWidgets: SavedWidget[] = [];
+  private analyserNode!: AnalyserNode;
+  private silenceTimer: number | null = null;
 
   /** 
    * Flag to detect if we're dealing with a short clip. 
@@ -939,6 +942,56 @@ vec3 fade(vec3 t) {
     this.camera.updateProjectionMatrix();
   }
 
+  private prepareSpeechText(markdown: string): string {
+    let text = markdown;
+  
+    // 1) Remove fenced code blocks
+    text = text.replace(/```[\s\S]*?```/g, "");
+  
+    // 2) Remove all table rows
+    text = text.replace(/(^\|.*\|\s*(\r?\n|$))+/gm, "");
+  
+    // 3) Strip inline code backticks, bold and italic markers
+    text = text
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1");
+  
+    // 4) Strip leading hashes from headings
+    text = text.replace(/^#+\s*(.*)$/gm, "$1");
+  
+    // 5) Convert bullet lists into comma‑separated phrases
+    text = text.replace(/^[-*]\s+(.*)$/gm, (_m, item) => `${item.trim()},`);
+  
+    // 6) Collapse multiple newlines into a single pause
+    text = text.replace(/\n{2,}/g, ". ").replace(/\n/g, ", ");
+  
+    // ⬇ NEW: Remove stray hyphens, slashes and quotes ⬇
+    text = text
+      // remove any dash/slash characters
+      .replace(/[-\/]/g, " ")
+      // remove straight and “smart” quotes
+      .replace(/['"`“”‘’]/g, "");
+  
+    // 7) Trim and ensure it ends with a period
+    text = text
+      .trim()
+      .replace(/,+$/, "")
+      .replace(/\.?$/, ".");
+  
+    // 8) If there was a table originally, tuck in a short cue
+    if (/^\|.*\|/m.test(markdown)) {
+      text += " I’ve added the table to the chat.";
+    }
+  
+    return text;
+  }
+  
+  
+  
+  
+  
+
   async playTts(textToSpeak: string, speakerId: string = 'af_bella') {
     // Ensure the speaker ID is valid
     const validSpeakers = [
@@ -990,12 +1043,16 @@ vec3 fade(vec3 t) {
                 sound.setVolume(0.5);
                 sound.play();
                 this.analyser = new THREE.AudioAnalyser(sound, 32);
+                (sound as any).source.onended = () => {
+                  console.log('TTS finished → restarting mic');
+                  this.startRecording();
+                };
+                
             }
             ,
             undefined,
             (err) => console.error('Audio loading error:', err)
         );
-        this.chatMessages.push({ sender: 'ai', content: textToSpeak });
     } catch (error) {
         console.error('Error calling TTS or playing audio:', error);
     }
@@ -1037,29 +1094,110 @@ vec3 fade(vec3 t) {
 
 
   public startRecording() {
+    this.isListening = true;  
     this.isRecording = true;
     this.uniforms['u_isRecording'].value = 1.0;
-    this.audioChunks = []; // clear previous
+    this.audioChunks = [];
+  
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
+        // ------- MediaRecorder -------
         this.mediaRecorder = new MediaRecorder(stream);
         this.mediaRecorder.start();
         console.log('Recording started');
-
-        this.mediaRecorder.addEventListener('dataavailable', (event) => {
-          if (event.data.size > 0) {
-            this.audioChunks.push(event.data);
-          }
+  
+        // ------- WebAudio setup -------
+        const audioCtx = new AudioContext();
+        // if the context is suspended (autoplay policies), resume it:
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+  
+        const source = audioCtx.createMediaStreamSource(stream);
+        this.analyserNode = audioCtx.createAnalyser();
+        // use a smaller FFT size to speed up:
+        this.analyserNode.fftSize = 1024;
+        source.connect(this.analyserNode);
+  
+        // pre‑allocate your buffer based on the analyser’s fftSize:
+        this.dataArray = new Uint8Array(this.analyserNode.fftSize);
+  
+        // clear any old timer just in case:
+        if (this.silenceTimer !== null) {
+          clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+  
+        // start watching for silence:
+        this.watchForSilence();
+  
+        // ------- keep collecting chunks -------
+        this.mediaRecorder.addEventListener('dataavailable', ev => {
+          if (ev.data.size > 0) this.audioChunks.push(ev.data);
         });
       })
-      .catch(error => {
-        console.error('Failed to start recording:', error);
-        this.isRecording = false; 
+      .catch(err => {
+        console.error('Failed to start recording:', err);
+        this.isRecording = false;
       });
   }
 
+  public stopListening() {
+    this.isListening = false;
+    if (this.silenceTimer !== null) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+    }
+  }
+
+  private watchForSilence() {
+    const SILENCE_THRESHOLD = 0.02;
+    const SILENCE_DURATION  = 3000;
+
+    const check = () => {
+      // if someone else cancelled listening, bail out
+      if (!this.isListening) return;
+
+      // read mic volume…
+      this.analyserNode.getByteTimeDomainData(this.dataArray);
+      let sum = 0;
+      for (let i = 0; i < this.dataArray.length; i++) {
+        const v = (this.dataArray[i] / 128) - 1;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / this.dataArray.length);
+
+      if (rms < SILENCE_THRESHOLD) {
+        if (this.silenceTimer === null) {
+          this.silenceTimer = window.setTimeout(() => {
+            this.silenceTimer = null;
+            if (this.isListening && this.mediaRecorder?.state === 'recording') {
+              console.log('Silence → stopRecording()');
+              this.stopRecording();
+            }
+          }, SILENCE_DURATION);
+        }
+      } else {
+        if (this.silenceTimer !== null) {
+          clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+      }
+
+      // continue polling only if still listening
+      if (this.isListening && this.mediaRecorder?.state === 'recording') {
+        requestAnimationFrame(check);
+      }
+    };
+
+    requestAnimationFrame(check);
+  }
+  
+
 
   public async stopRecording() {
+    this.isListening = false;
     this.isRecording = false;
     this.uniforms['u_isRecording'].value = 0.0; 
     if (!this.mediaRecorder) {
@@ -1071,105 +1209,85 @@ vec3 fade(vec3 t) {
     console.log('Recording stopped');
 
     this.mediaRecorder.addEventListener('stop', async () => {
-        try {
-            // 1) Convert recorded chunks into a Blob (WAV format)
-            const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-            console.log('Recorded audio blob size:', audioBlob.size);
-
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.wav');
-
-            // 2) Transcribe audio (Speech-to-Text)
-            console.log("Sending recorded audio to transcription...");
-            const sttResponse = await fetch('http://localhost:5000/transcribe', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!sttResponse.ok) {
-                console.error('Transcription failed:', sttResponse.statusText);
-                return;
-            }
-
-            const sttData = await sttResponse.json();
-            let finalReply = sttData.transcription.trim();
-            console.log('Transcribed text:', finalReply);
-
-            // 3) Validate finalReply (Prevents Blob URL issues)
-            if (!finalReply || finalReply.startsWith("blob:")) {
-                console.error("TTS Error: finalReply is invalid. Got:", finalReply);
-                return;
-            }
-
-            // 4) Send the transcribed text to the AI agent
-            this.isWaitingForAgent = true;
-
-            const agentResponse = await fetch('http://localhost:8000/run_task', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/event-stream'
-                },
-                body: JSON.stringify({ task: finalReply })
-            });
-
-            if (!agentResponse.ok) {
-                console.error('Agent request failed:', agentResponse.statusText);
-                this.isWaitingForAgent = false;
-                return;
-            }
-
-            // 5) Read SSE response from the AI agent
-            const reader = agentResponse.body?.getReader();
-            if (!reader) {
-                console.error('Failed to get response reader.');
-                this.isWaitingForAgent = false;
-                return;
-            }
-            const decoder = new TextDecoder();
-            finalReply = ""; // Reset before processing
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              const chunkText = decoder.decode(value, { stream: true });
-              console.log('SSE chunk from agent:', chunkText);
-              const lines = chunkText.split('\n');
-              finalReply = chunkText
-              // for (const line of lines) {
-              //   if (line.startsWith('data: ')) {
-              //     const jsonStr = line.slice('data: '.length).trim();
-              //     try {
-              //       const message = JSON.parse(jsonStr);
-              //       if (message.type === 'Result') {
-              //         finalReply = message.message;
-              //       }
-              //       if (message.status === 'completed') {
-              //         console.log('SSE stream completed');
-              //         await reader.cancel();
-              //         break;
-              //       }
-              //     } catch (err) {
-              //       console.error('Error parsing SSE chunk:', err);
-              //     }
-              //   }
-              // }
-            }
-            this.isWaitingForAgent = false;
-
-            // 6) Validate finalReply (Prevent empty responses)
-            if (!finalReply) {
-                console.error("TTS Error: AI response is empty. Not sending to TTS.");
-                return;
-            }
-
-            // 7) Play the TTS audio (ONLY ONCE)
-            console.log("Final reply is valid. Sending to playTts():", finalReply);
-            this.playTts(finalReply, "af_bella");
-
-        } catch (error) {
-            console.error('Error in STT -> AI -> TTS flow:', error);
-            this.isWaitingForAgent = false;
+      try {
+        // 1) Convert recorded chunks into a Blob (WAV format)
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+        console.log('Recorded audio blob size:', audioBlob.size);
+    
+        // 2) Transcribe audio (Speech-to-Text)
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.wav');
+        console.log("Sending recorded audio to transcription...");
+        const sttResponse = await fetch('http://localhost:5000/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        if (!sttResponse.ok) {
+          console.error('Transcription failed:', sttResponse.statusText);
+          return;
         }
+        const sttData = await sttResponse.json();
+        const transcription = sttData.transcription.trim();
+        console.log('Transcribed text:', transcription);
+    
+        // — Push user bubble —
+        this.chatMessages.push({ sender: 'user', content: transcription });
+        this.persistChatMessages();
+        if (!this.currentWidgetId) {
+          await this.createNewWidgetIfNeeded(transcription);
+        }
+        this.persistActiveWidgetToFirebase();
+    
+        // 3) Send to your agent
+        this.isWaitingForAgent = true;
+        const history = this.chatMessages.map(m => ({ sender: m.sender, content: m.content }));
+        const agentResponse = await fetch('http://localhost:8000/run_task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify({ task: transcription, history })
+        });
+        if (!agentResponse.ok) {
+          console.error('Agent request failed:', agentResponse.statusText);
+          this.isWaitingForAgent = false;
+          return;
+        }
+    
+        // 4) Read the SSE stream and accumulate
+        const reader = agentResponse.body!.getReader();
+        const decoder = new TextDecoder();
+        let aiReply = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          aiReply += decoder.decode(value, { stream: true });
+        }
+        this.isWaitingForAgent = false;
+    
+        // 5) Strip markdown fences & parse JSON if your AI wraps result in JSON
+        try {
+          aiReply = JSON.parse(aiReply);
+        } catch {
+          // not JSON, leave as-is
+        }
+
+        if (aiReply.startsWith('```')) {
+          aiReply = aiReply.replace(/```[^\n]*\n?/, '').replace(/```$/, '');
+        }
+      
+    
+        // — Push AI bubble —
+        this.chatMessages.push({ sender: 'ai', content: aiReply });
+        this.persistChatMessages();
+        this.persistActiveWidgetToFirebase();
+    
+        // 6) Finally, speak it
+        const speechText = this.prepareSpeechText(aiReply);
+        await this.playTts(speechText, 'af_bella');
+    
+      } catch (err) {
+        console.error('Error in STT → AI → TTS flow:', err);
+        this.isWaitingForAgent = false;
+      }
     });
 
     this.mediaRecorder = null;
